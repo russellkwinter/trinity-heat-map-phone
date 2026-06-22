@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Site Intelligence — Canadian Metro Markets</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#05131b; --ink2:#0a1c26; --panel:#0c1f29; --panel2:#0e2530;
+    --panel-b:#081a23; --line:#15323f; --line2:#1d4a5a;
+    --text:#eafbff; --muted:#86b0bd; --muted2:#4f7c8c;
+    --accent:#c4ff3a; --accent2:#00ecd6;
+    --neon-mag:#ff2bd6; --neon-red:#ff3b5c;
+    --c0:#7a0015; --c1:#e01f2e; --c2:#ffc31c; --c3:#7fe024; --c4:#1dff5c;
+    --mono:'IBM Plex Mono',monospace; --disp:'Space Grotesk',sans-serif; --body:'Inter',sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--ink)}
+  #app{
+    font-family:var(--body); color:var(--text);
+    background:radial-gradient(1200px 700px at 78% -10%, rgba(0,236,214,.04), transparent 60%), radial-gradient(900px 600px at 5% 110%, rgba(255,43,214,.03), transparent 55%), var(--ink);
+    height:100vh; width:100vw; display:flex; flex-direction:column; overflow:hidden;
+  }
+  .top{
+    display:flex; align-items:center; gap:14px; padding:11px 18px;
+    background:linear-gradient(180deg,#08202a,#06151d); border-bottom:1px solid var(--line2);
+    box-shadow:0 1px 0 rgba(255,255,255,.04), 0 10px 30px -18px rgba(0,0,0,.75);
+  }
+  .logo{height:34px;width:auto;display:block;border-radius:4px}
+  .brand{display:flex;flex-direction:column;line-height:1.05}
+  .brand .eyebrow{font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:.16em;color:var(--accent2);text-transform:uppercase}
+  .brand h1{font-family:var(--disp);font-weight:600;font-size:16px;margin:3px 0 0;letter-spacing:-.01em}
+  .top .spacer{flex:1}
+  .modeswitch{display:flex;background:var(--ink2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+  .modeswitch button{
+    font-family:var(--body);font-weight:500;font-size:11.5px;color:var(--muted);background:none;border:none;
+    padding:6px 12px;border-radius:6px;cursor:pointer;letter-spacing:0;transition:.15s;white-space:nowrap}
+  .modeswitch button.on{background:var(--accent);color:#0a1400;font-weight:600;box-shadow:0 2px 10px -3px rgba(196,255,58,.45)}
+  .geoswitch{margin-right:4px}
+  .geoswitch button.on{background:var(--accent2);color:#012420;font-weight:600;box-shadow:0 2px 10px -3px rgba(0,236,214,.45)}
+  .transitbtn{margin-left:6px;border-color:rgba(255,255,255,.18)}
+  .transitbtn.on{background:#ff2bd6;color:#1a0316;font-weight:600;box-shadow:0 2px 10px -3px rgba(255,43,214,.45)}
+  .densbtn{margin-left:6px;border-color:rgba(255,255,255,.18)}
+  .densbtn.on{background:#4d7cfe;color:#04122e;font-weight:600;box-shadow:0 2px 10px -3px rgba(77,124,254,.5)}
+  .demobtn.on{background:#ff8a3b;color:#1a0d04;font-weight:600;box-shadow:0 2px 10px -3px rgba(255,138,59,.5)}
+  .demosel{margin-left:6px;height:28px;border-radius:7px;background:rgba(20,28,40,.92);color:#dfe7f2;border:1px solid rgba(255,255,255,.18);font-family:var(--body);font-size:11px;padding:0 8px;cursor:pointer}
+  .demolegend{top:228px}
+  .denslegend{position:absolute;left:14px;top:92px;z-index:600;background:rgba(13,20,30,.86);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:212px}
+  .denslegend .lt{font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .densramp{display:flex;height:10px;border-radius:5px;overflow:hidden}
+  .densramp span{flex:1}
+  .denssc{display:flex;font-family:var(--mono);font-size:8px;color:var(--muted2);margin-top:4px}
+  .denssc span{flex:1;text-align:center}
+  .denshint{font-family:var(--body);font-size:10px;color:var(--accent2);margin-top:7px;line-height:1.4}
+  .densnote{font-family:var(--body);font-size:9.5px;color:var(--muted2);margin-top:5px}
+  .tract{transition:fill-opacity .15s}
+  .leaflet-pane .rail{filter:none}
+  .neighpoly{transition:fill-opacity .2s}
+  .leaflet-interactive{cursor:pointer;filter:drop-shadow(0 0 1.4px rgba(255,255,255,.18))}
+  .leaflet-tooltip.ntip{background:#0c121d;color:#e8eef6;border:1px solid var(--line2);border-radius:6px;font-family:var(--mono);font-size:10.5px;padding:3px 7px;box-shadow:0 4px 14px rgba(0,0,0,.55)}
+  .leaflet-tooltip.ntip:before{display:none}
+  #soloSel{font-family:var(--mono);font-size:11px;background:var(--ink2);color:var(--text);
+    border:1px solid var(--line);border-radius:8px;padding:7px 9px;cursor:pointer;display:none}
+  .body{flex:1;display:flex;min-height:0}
+  /* rail */
+  .rail{width:320px;flex-shrink:0;background:var(--panel-b);border-right:1px solid var(--line);
+    overflow-y:auto;padding:14px 14px 18px}
+  .rail::-webkit-scrollbar{width:8px}.rail::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+  .secthead{font-family:var(--body);font-weight:600;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted2);margin:4px 2px 10px;display:flex;align-items:center;gap:8px}
+  .secthead::after{content:"";flex:1;height:1px;background:var(--line)}
+  .metric{background:var(--ink2);border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:9px;transition:.18s}
+  .metric.off{opacity:.42}
+  .mrow1{display:flex;align-items:center;gap:9px}
+  .chk{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--line2);flex-shrink:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:.15s;background:var(--ink)}
+  .chk.on{background:var(--accent);border-color:var(--accent)}
+  .chk svg{width:11px;height:11px;display:none}.chk.on svg{display:block}
+  .mname{font-family:var(--disp);font-weight:500;font-size:13px;flex:1;cursor:pointer}
+  .dir{font-family:var(--mono);font-size:9px;letter-spacing:.04em;padding:2px 6px;border-radius:5px;
+    border:1px solid var(--line2);color:var(--muted);white-space:nowrap}
+  .dir.good{color:#7fd4a8;border-color:#2f5b46}.dir.bad{color:#e09a8c;border-color:#6b3a32}
+  .mblurb{font-size:11px;color:var(--muted2);margin:6px 0 0 26px;font-family:var(--body)}
+  .wrap{display:flex;align-items:center;gap:10px;margin:9px 0 1px 26px}
+  .wrap input[type=range]{flex:1;-webkit-appearance:none;height:4px;border-radius:3px;
+    background:var(--line2);outline:none;cursor:pointer}
+  .wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--accent);border:2px solid #1a1205;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .wrap input[type=range]:disabled{opacity:.4;cursor:not-allowed}
+  .wval{font-family:var(--mono);font-size:11px;color:var(--text);width:42px;text-align:right;font-weight:500}
+  .wval small{color:var(--muted2)}
+  .wnum{font-family:var(--mono);font-size:11.5px;color:var(--text);width:50px;text-align:right;font-weight:600;
+    background:var(--ink);border:1px solid var(--line2);border-radius:6px;padding:5px 7px;-moz-appearance:textfield}
+  .wnum:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(196,255,58,.16)}
+  .wnum:disabled{opacity:.4;cursor:not-allowed}
+  .wnum::-webkit-inner-spin-button,.wnum::-webkit-outer-spin-button{opacity:.45;height:18px}
+  .wpct{font-family:var(--mono);font-size:11px;color:var(--muted2)}
+  .share{font-family:var(--mono);font-size:10px;margin-left:26px;margin-top:5px;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .share b{font-weight:600;color:var(--text)}
+  .share .sbar{display:inline-block;height:5px;border-radius:3px;min-width:2px;transition:width .15s}
+  .mixwrap{background:var(--ink2);border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:14px}
+  .mixhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+  .mixhead .t{font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+  .mixhead .h{font-family:var(--body);font-size:9.5px;color:var(--muted2)}
+  .mixbar{display:flex;height:13px;border-radius:5px;overflow:hidden;background:var(--line)}
+  .mixbar span{transition:flex-basis .18s}
+  .mixleg{display:flex;flex-wrap:wrap;gap:5px 11px;margin-top:9px}
+  .mixleg .chip{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted)}
+  .mixleg .chip i{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+  .mixleg .chip b{font-family:var(--mono);color:var(--text);font-weight:600}
+  .mixleg .chip.dim{opacity:.32}
+  .mixempty{font-family:var(--mono);font-size:10px;color:var(--muted2);text-align:center;padding:2px}
+  .railbtns{display:flex;gap:8px;margin:4px 2px 16px}
+  .railbtns button{flex:1;font-family:var(--body);font-weight:500;font-size:11px;color:var(--muted);background:var(--ink2);
+    border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer;transition:.15s}
+  .railbtns button:hover{color:var(--text);border-color:var(--line2)}
+  .cov{font-size:11px;color:var(--muted);line-height:1.7;font-family:var(--body)}
+  .cov b{color:var(--text);font-weight:500}
+  .covbar{height:4px;border-radius:2px;background:var(--line);margin:3px 0 8px;overflow:hidden}
+  .covbar span{display:block;height:100%;background:var(--accent2)}
+  /* map */
+  .mapwrap{flex:1;position:relative;min-width:0}
+  #map{position:absolute;inset:0;background:var(--ink)}
+  .leaflet-container{background:var(--ink)!important;font-family:var(--body)}
+  .prov{fill:#0a1f29;stroke:#17414f;stroke-width:.8;transition:fill .2s}
+  .legend{position:absolute;left:14px;bottom:14px;z-index:600;background:rgba(13,20,30,.86);
+    backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:188px}
+  .legend .lt{font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .legbar{height:10px;border-radius:5px;background:linear-gradient(90deg,var(--c0),var(--c1),var(--c2),var(--c3),var(--c4))}
+  .legsc{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:4px}
+  .legnote{font-family:var(--body);font-size:10px;color:var(--muted2);margin-top:7px;line-height:1.5}
+  .legnote i{display:inline-block;width:8px;height:8px;border-radius:50%;border:1.4px dashed var(--muted2);vertical-align:middle;margin-right:4px}
+  .tkey{position:absolute;left:14px;top:92px;z-index:600;background:rgba(13,20,30,.92);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:11px;padding:11px 13px;max-width:215px;box-shadow:0 12px 34px -18px rgba(0,0,0,.85)}
+  .tkh{font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+  .tkr{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--text);padding:3px 0;font-weight:500;line-height:1.2}
+  .tks{width:18px;height:3px;border-radius:2px;flex-shrink:0}
+  .tkn{font-size:9.5px;color:var(--muted2);margin-top:9px;line-height:1.45;border-top:1px solid var(--line);padding-top:7px}
+  /* leaderboard */
+  .board{position:absolute;right:14px;top:92px;z-index:600;width:236px;background:rgba(13,20,30,.9);
+    backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:11px;overflow:hidden;
+    max-height:calc(100% - 106px);display:flex;flex-direction:column}
+  .board h3{font-family:var(--body);font-weight:600;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
+    margin:0;padding:11px 13px 9px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .board h3 span{color:var(--accent)}
+  .boardlist{overflow-y:auto;padding:4px 0}
+  .boardlist::-webkit-scrollbar{width:6px}.boardlist::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+  .brow{display:flex;align-items:center;gap:9px;padding:6px 13px;cursor:pointer;transition:.12s;border-left:2px solid transparent}
+  .brow:hover{background:rgba(255,255,255,.04)}
+  .brow.hot{border-left-color:var(--accent);background:rgba(196,255,58,.07)}
+  .brk{font-family:var(--mono);font-size:10px;color:var(--muted2);width:18px}
+  .brn{flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brnp{font-family:var(--mono);font-size:9px;color:var(--muted2)}
+  .brs{font-family:var(--mono);font-size:12.5px;font-weight:600}
+  .swatch{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  /* detail card */
+  .card{position:absolute;left:50%;top:92px;transform:translateX(-50%);z-index:650;width:300px;
+    background:rgba(13,20,30,.95);backdrop-filter:blur(12px);border:1px solid var(--line2);border-radius:12px;
+    padding:13px 15px;display:none;box-shadow:0 18px 40px -16px rgba(0,0,0,.7)}
+  .card.show{display:block}
+  .cardx{position:absolute;right:10px;top:9px;color:var(--muted2);cursor:pointer;font-size:15px;line-height:1}
+  .cardh{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+  .cardh .nm{font-family:var(--disp);font-weight:600;font-size:16px}
+  .cardh .pv{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .cardsub{font-family:var(--body);font-size:11px;color:var(--muted);margin-bottom:11px}
+  .scorebig{display:flex;align-items:center;gap:11px;margin-bottom:12px;padding:9px 11px;background:var(--ink2);border-radius:9px;border:1px solid var(--line)}
+  .scorebig .ring{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-weight:600;font-size:13px;color:#0c121d}
+  .scorebig .sl{font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .scorebig .sd{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .mlist{display:flex;flex-direction:column;gap:1px}
+  .ml{display:flex;align-items:center;gap:9px;padding:5px 2px;font-size:11.5px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .ml .mln{flex:1;color:var(--muted)}
+  .ml .mlv{font-family:var(--mono);font-weight:500}
+  .ml .mlb{width:46px;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+  .ml .mlb span{display:block;height:100%}
+  .ml.na .mlv{color:var(--muted2);font-style:italic}
+  .foot{font-family:var(--mono);font-size:9px;color:var(--muted2);padding:8px 18px;border-top:1px solid var(--line);
+    background:var(--ink2);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .foot a{color:var(--muted)}
+  .railtoggle{display:none}
+  @media(max-width:760px){
+    #app{height:100vh;width:100vw}
+    .rail{position:absolute;z-index:700;left:0;top:0;bottom:0;width:290px;transform:translateX(-100%);transition:.25s;box-shadow:8px 0 30px rgba(0,0,0,.5)}
+    .rail.open{transform:none}
+    .railtoggle{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;
+      background:var(--ink2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+    .board{width:170px}.card{width:min(300px,86vw)}
+  }
+
+  /* ===== guided UX layer ===== */
+  .leaflet-top{top:92px}
+  .guide{position:absolute;left:0;right:0;top:0;z-index:680;background:linear-gradient(180deg,rgba(9,14,22,.97),rgba(9,14,22,.9));border-bottom:1px solid var(--line);padding:9px 14px 10px;backdrop-filter:blur(8px)}
+  .guide .qv{display:flex;gap:7px;align-items:center;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .guide .qv::-webkit-scrollbar{display:none}
+  .qvlab{font-family:var(--body);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;margin-right:3px}
+  .qvbtn{font-family:var(--body);font-size:12.5px;font-weight:600;color:var(--text);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;padding:6px 13px;cursor:pointer;transition:.12s;white-space:nowrap}
+  .qvbtn:hover{background:rgba(255,255,255,.13)}
+  .qvbtn.on{background:var(--accent);color:#0c121d;border-color:transparent;box-shadow:0 2px 12px -4px rgba(232,176,70,.6)}
+  .guide .now{display:flex;align-items:flex-start;gap:9px;margin-top:9px;font-family:var(--body);font-size:13px;color:var(--muted);line-height:1.45}
+  .guide .now b{color:#fff;font-weight:600}
+  .nowdot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px}
+  .helpbtn{position:absolute;right:16px;bottom:16px;z-index:690;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#0c121d;border:none;font-weight:800;font-size:17px;cursor:pointer;box-shadow:0 8px 20px -6px rgba(0,0,0,.7)}
+  .helpbtn:hover{filter:brightness(1.08)}
+  .modal{position:fixed;inset:0;z-index:900;background:rgba(5,9,15,.74);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:20px}
+  .modal.hidden{display:none}
+  .modalcard{max-width:460px;background:var(--ink);border:1px solid var(--line2);border-radius:16px;padding:24px 26px;box-shadow:0 36px 80px -22px rgba(0,0,0,.85)}
+  .modalcard h2{font-family:var(--disp);font-size:21px;margin:0 0 8px;color:#fff}
+  .modalcard p{font-family:var(--body);font-size:13.5px;color:var(--muted);line-height:1.6;margin:0 0 14px}
+  .modalcard ul{margin:0 0 18px;padding-left:4px;list-style:none}
+  .modalcard li{font-family:var(--body);font-size:13.5px;color:var(--text);line-height:1.55;margin-bottom:10px;padding-left:26px;position:relative}
+  .modalcard li .em{position:absolute;left:0;top:0;font-size:15px}
+  .modalcard .go{font-family:var(--body);font-weight:700;font-size:14px;background:var(--accent);color:#0c121d;border:none;border-radius:11px;padding:12px 18px;cursor:pointer;width:100%}
+  .modalcard .go:hover{filter:brightness(1.06)}
+
+  /* ===== tab simplification layer ===== */
+  .tabs{display:flex;gap:3px;background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .tabs .tab{font-family:var(--disp);font-weight:600;font-size:12.5px;color:var(--muted);background:none;border:none;padding:8px 16px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .tabs .tab:hover{color:var(--text)}
+  .tabs .tab.on{background:var(--accent);color:#0c1400;box-shadow:0 2px 12px -4px rgba(196,255,58,.5)}
+  .cmasearch{margin-left:10px;height:30px;border-radius:8px;background:rgba(20,28,40,.92);color:#dfe7f2;border:1px solid rgba(255,255,255,.18);font-family:var(--body);font-size:11.5px;padding:0 11px;width:150px;outline:none}
+  .cmasearch:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(196,255,58,.16)}
+  .cmasearch::placeholder{color:var(--muted2)}
+  .nweights{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .nwt{display:flex;align-items:center;gap:4px;font-family:var(--body);font-size:10px;color:var(--muted)}
+  .nwt input[type=range]{width:64px}
+  .nwt .nwx{cursor:pointer;font-size:12px;width:13px;text-align:center;color:var(--accent)}
+  .exportbtn{margin-left:9px;font-family:var(--body);font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);background:rgba(196,255,58,.08);border:1px solid rgba(196,255,58,.32);border-radius:6px;padding:3px 8px;cursor:pointer;vertical-align:middle}
+  .exportbtn:hover{background:rgba(196,255,58,.18)}
+  .ctrlbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+  .ctrlgrp{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+  .cglab{font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2)}
+  .cgsel{height:28px;border-radius:7px;background:rgba(20,28,40,.92);color:#dfe7f2;border:1px solid rgba(255,255,255,.18);font-family:var(--body);font-size:11.5px;padding:0 9px;cursor:pointer}
+  .cghint{font-family:var(--body);font-size:11px;color:var(--muted2)}
+  #app[data-tab="neigh"] .rail,#app[data-tab="gta"] .rail{display:none}
+  #app[data-tab="gta"] .board,#app[data-tab="neigh"] .board{display:none}
+  #app[data-tab="neigh"][data-city="1"] .board{display:flex}
+  #app[data-tab="neigh"] .legend,#app[data-tab="gta"] .legend{display:none}
+  /* when a city is focused, the curated neighbourhood score scale is the right legend */
+  #app[data-tab="neigh"][data-city="1"] .legend{display:block}
+  #app[data-tab="neigh"][data-city="1"] #densLegend{display:none!important}
+  #app[data-tab="neigh"] .railtoggle,#app[data-tab="gta"] .railtoggle{display:none}
+  /* metro drill-down: swap the composite legend for the tract legend when zoomed in */
+  #app[data-tab="metro"][data-zoom="deep"] .legend{display:none}
+  #app[data-tab="metro"][data-zoom="deep"] #densLegend{display:block!important}
+  #app[data-tab="metro"][data-zoom="shallow"] #densLegend{display:none!important}
+  #app[data-tab="metro"][data-zoom="deep"][data-city="1"] .legend{display:block}
+  #app[data-tab="metro"][data-zoom="deep"][data-city="1"] #densLegend{display:none!important}
+  @media(max-width:760px){
+    .tabs .tab{padding:7px 10px;font-size:11px}
+    .cmasearch{width:104px;margin-left:6px}
+    .addrsearch{width:120px}
+  }
+  .addrsearch{width:168px;margin-left:8px;background:#0c121d;color:#e8eef6;border:1px solid var(--line2);border-radius:6px;padding:5px 8px;font-family:var(--mono);font-size:11px;outline:none}
+  .addrsearch:focus{border-color:var(--accent2,#0a8bff)}
+  .addrgo{margin-left:4px;background:var(--accent2,#0a8bff);color:#03131f;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--mono)}
+  .addrgo:hover{filter:brightness(1.12)}
+  .addrstatus{margin-left:6px;font-family:var(--mono);font-size:10.5px;color:var(--muted2,#9fb0c2)}
+  .addrpop{font-family:var(--mono);font-size:11px;color:#e8eef6;min-width:212px}
+  .addrpop .aph{font-weight:700;font-size:12px;margin-bottom:2px;line-height:1.25}
+  .addrpop .apsub{opacity:.82;font-size:10px;margin-bottom:6px;line-height:1.3}
+  .aptbl{border-collapse:collapse;width:100%}
+  .aptbl td{padding:1.5px 5px;border-top:1px solid rgba(255,255,255,.07)}
+  .aptbl td:last-child{text-align:right;font-weight:600;white-space:nowrap}
+  .aptblwrap{max-height:248px;overflow-y:auto;margin-top:2px}
+  .aptblwrap::-webkit-scrollbar{width:7px}
+  .aptblwrap::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+  .infoi{cursor:help;color:var(--accent2);font-size:11px;font-style:normal;margin-left:1px;opacity:.85}
+  .infoi:hover{opacity:1}
+  .copybtn{margin-left:8px;height:30px;border-radius:8px;background:rgba(0,236,214,.1);color:var(--accent2);border:1px solid rgba(0,236,214,.35);font-family:var(--body);font-size:11px;font-weight:600;padding:0 11px;cursor:pointer;white-space:nowrap}
+  .copybtn:hover{background:rgba(0,236,214,.2)}
+  .homebtn{position:absolute;right:16px;bottom:60px;z-index:690;width:36px;height:36px;border-radius:50%;background:var(--ink2);color:var(--text);border:1px solid var(--line2);font-size:17px;cursor:pointer;box-shadow:0 8px 20px -6px rgba(0,0,0,.7)}
+  .homebtn:hover{border-color:var(--accent2);color:var(--accent2)}
+  .cardcov{font-family:var(--mono);font-size:9px;color:var(--muted2);margin-top:9px;border-top:1px solid var(--line);padding-top:7px;line-height:1.4}
+  .addrpopwrap .leaflet-popup-content-wrapper{background:#0c121d;color:#e8eef6;border:1px solid var(--line2);box-shadow:0 6px 22px rgba(0,0,0,.6)}
+  .addrpopwrap .leaflet-popup-tip{background:#0c121d;border:1px solid var(--line2)}
+  .addrpopwrap a.leaflet-popup-close-button{color:#9fb0c2}
+  .addrwrap{position:relative;display:inline-flex;align-items:center}
+  .addrsugg{position:absolute;top:100%;left:0;right:0;margin-top:5px;background:#0c121d;border:1px solid var(--line2);border-radius:8px;z-index:1200;max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+  .addrsugg .asg{padding:6px 9px;font-size:11px;line-height:1.3;cursor:pointer;border-top:1px solid rgba(255,255,255,.06);color:#cfe3f5;font-family:var(--mono)}
+  .addrsugg .asg:first-child{border-top:none}
+  .addrsugg .asg.sel,.addrsugg .asg:hover{background:rgba(10,139,255,.18)}
+  .addrsugg .asgmsg{padding:7px 9px;font-size:10.5px;color:var(--muted2,#9fb0c2);font-family:var(--mono)}
+  .addrpop .aptransit{color:var(--accent2,#0a8bff);font-size:10.5px;margin:1px 0 7px;font-weight:600}
+
+  /* ===== session 3: relocated zoom + collapsible panels ===== */
+  .leaflet-top.leaflet-right{right:248px}
+  @media(max-width:760px){.leaflet-top.leaflet-right{right:176px}}
+  .rail{transition:width .22s ease,padding .22s ease}
+  .rail.collapsed{width:0;min-width:0;padding-left:0;padding-right:0;border-right:none;overflow:hidden}
+  .railcollapsebtn{background:rgba(196,255,58,.14);color:var(--accent);border:1px solid rgba(196,255,58,.45);border-radius:6px;min-width:30px;height:25px;cursor:pointer;font-size:16px;font-weight:700;line-height:1;padding:0 8px;margin-left:5px}
+  .railcollapsebtn:hover{background:var(--accent);color:#0c1400}
+  .railreopen{display:none;align-items:center;justify-content:center;gap:5px;position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:610;background:var(--accent);color:#0c1400;border:none;border-radius:0 10px 10px 0;padding:14px 9px;font-family:var(--body);font-weight:700;font-size:12px;letter-spacing:.05em;cursor:pointer;writing-mode:vertical-rl;text-orientation:mixed;box-shadow:0 4px 16px -5px rgba(0,0,0,.7)}
+  .railreopen:hover{filter:brightness(1.08)}
+  .panelcollapse{background:rgba(196,255,58,.14);border:1px solid rgba(196,255,58,.45);color:var(--accent);cursor:pointer;font-size:15px;font-weight:700;line-height:1;padding:3px 9px;border-radius:6px;transition:transform .15s,background .12s;flex:0 0 auto;margin-left:4px}
+  .panelcollapse:hover{background:var(--accent);color:#0c1400}
+  .board.collapsed .boardlist{display:none}
+  .board.collapsed .panelcollapse{transform:rotate(-90deg)}
+  .tkh{cursor:pointer}
+  .tkchev{float:right;transition:transform .15s;color:var(--accent2);font-size:14px;font-weight:700}
+  #transitKey.collapsed .tkchev{transform:rotate(-90deg)}
+  #transitKey.collapsed .tkr,#transitKey.collapsed .tkn{display:none}
+
+  /* ===== session 4: weighting presets + Data & sources modal ===== */
+  .presetrow{display:flex;align-items:center;gap:8px;margin:2px 2px 12px}
+  .presetrow label{font-family:var(--body);font-weight:600;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);flex-shrink:0}
+  .presetrow select{flex:1;height:30px;border-radius:7px;background:rgba(20,28,40,.92);color:#dfe7f2;border:1px solid var(--line2);font-family:var(--body);font-size:11.5px;padding:0 8px;cursor:pointer}
+  .presetrow select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(196,255,58,.16)}
+  .srcbtn{font-family:var(--body);font-size:10px;font-weight:600;letter-spacing:.04em;color:var(--accent2);background:rgba(0,236,214,.08);border:1px solid rgba(0,236,214,.3);border-radius:6px;padding:3px 9px;cursor:pointer}
+  .srcbtn:hover{background:rgba(0,236,214,.18)}
+  .modalcard.srcs{max-width:560px;max-height:84vh;overflow-y:auto}
+  .modalcard.srcs::-webkit-scrollbar{width:8px}.modalcard.srcs::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+  .srcgrp{font-family:var(--body);font-weight:600;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent2);margin:16px 0 8px;border-bottom:1px solid var(--line);padding-bottom:5px}
+  .srcrow{display:flex;gap:11px;font-family:var(--body);font-size:12.5px;line-height:1.45;margin-bottom:9px}
+  .srcrow .sname{flex:0 0 120px;color:#fff;font-weight:600}
+  .srcrow .sdesc{flex:1;color:var(--muted)}
+  .srcrow .sdesc b{color:var(--text);font-weight:600}
+
+  /* ===== session 5: saved scenarios, note pins, export ===== */
+  .scenwrap{margin:2px 2px 6px}
+  .scenrow{display:flex;gap:7px;margin-bottom:8px}
+  .sceninput{flex:1;min-width:0;height:30px;border-radius:7px;background:rgba(20,28,40,.92);color:#dfe7f2;border:1px solid var(--line2);font-family:var(--body);font-size:11.5px;padding:0 9px;outline:none}
+  .sceninput:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(196,255,58,.16)}
+  .scenbtn{font-family:var(--body);font-weight:600;font-size:11px;color:#0c1400;background:var(--accent);border:none;border-radius:7px;padding:0 13px;cursor:pointer}
+  .scenbtn:hover{filter:brightness(1.06)}
+  .scenlist{display:flex;flex-direction:column;gap:5px}
+  .scenempty{font-family:var(--body);font-size:11px;color:var(--muted2);line-height:1.45}
+  .scenitem,.noteitem{display:flex;align-items:center;gap:6px;background:var(--ink2);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+  .scenload,.notego{flex:1;min-width:0;font-family:var(--body);font-size:12px;color:var(--text);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .scenload:hover,.notego:hover{color:var(--accent)}
+  .notego small{display:block;font-family:var(--mono);font-size:9px;color:var(--muted2);white-space:nowrap}
+  .scendel,.notedel{cursor:pointer;color:var(--muted2);font-size:15px;line-height:1;flex-shrink:0;width:16px;text-align:center}
+  .scendel:hover,.notedel:hover{color:var(--neon-red)}
+  .notesmlist{max-height:50vh;overflow-y:auto;margin-bottom:16px}
+  .copybtn.on{background:var(--accent);color:#0c1400;border-color:var(--accent)}
+  .leaflet-interactive.notepin{filter:drop-shadow(0 0 3px rgba(255,138,59,.65))}
+  .pinpop{font-family:var(--body);min-width:150px}
+  .pinpoplbl{font-weight:600;font-size:13px;color:#fff;margin-bottom:2px}
+  .pinpopsub{font-family:var(--mono);font-size:9.5px;color:var(--muted2);margin-bottom:7px}
+  .pindelbtn{font-family:var(--body);font-size:10.5px;color:var(--neon-red);background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.35);border-radius:6px;padding:3px 9px;cursor:pointer}
+  .pindelbtn:hover{background:rgba(255,59,92,.2)}
+
+  /* ===== session 6: traffic AADT layer ===== */
+  .trafficbtn{margin-left:6px;font-family:var(--body);font-weight:500;font-size:11.5px;color:var(--muted);background:var(--ink2);border:1px solid rgba(255,255,255,.18);border-radius:7px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+  .trafficbtn:hover{color:var(--text)}
+  .trafficbtn.on{background:#ff7a1a;color:#1a0d04;font-weight:600;box-shadow:0 2px 10px -3px rgba(255,122,26,.5)}
+  .leaflet-interactive.trafficln{filter:none}
+  /* collapsible legends */
+  .lt{cursor:pointer}
+  .legchev{float:right;cursor:pointer;transition:transform .15s;color:var(--accent2);font-size:13px;font-weight:700;margin-left:8px}
+  .collapsed .legchev{transform:rotate(-90deg)}
+  .legend.collapsed .legbar,.legend.collapsed .legsc,.legend.collapsed .legnote{display:none}
+  .denslegend.collapsed .densramp,.denslegend.collapsed .denssc,.denslegend.collapsed .denshint,.denslegend.collapsed .densnote{display:none}
+  .tkey.collapsed .gtarow{display:none!important}
+  /* ============================================================
+     PHONE BUILD — tuned for ~390px screens (overrides only)
+     ============================================================ */
+  @media(max-width:768px){
+    /* top bar wraps into compact rows */
+    .top{flex-wrap:wrap;gap:6px;padding:6px 8px;align-items:center}
+    .top .spacer{display:none}
+    .logo{height:22px}
+    .brand{flex:0 1 auto}
+    .brand .eyebrow{display:none}
+    .brand h1{font-size:12px;margin:0}
+    .railtoggle{font-size:11px;padding:6px 9px;order:1}
+    .copybtn{height:30px;font-size:10.5px;padding:0 8px;order:2}
+    .tabs{order:3;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .tabs .tab{font-size:11.5px;padding:7px 12px;white-space:nowrap;flex:0 0 auto}
+    .cmasearch{display:none}
+    .addrwrap{order:4;flex:1 1 100%}
+    .addrsearch{width:100%;margin-left:0;font-size:12px;height:32px;box-sizing:border-box}
+    .addrgo{font-size:11px;padding:6px 10px}
+    .addrstatus{display:none}
+    /* control / guide bar */
+    .guide{padding:5px 8px 6px}
+    .guide .now{font-size:11px;line-height:1.35;margin-top:6px}
+    .ctrlbar{gap:6px}
+    .cglab{font-size:9px}
+    .cgsel,.demosel,.presetrow select{height:30px;font-size:12px}
+    .modeswitch button{font-size:11px;padding:6px 9px}
+    .qvbtn{font-size:11.5px;padding:6px 11px}
+    .transitbtn,.trafficbtn{font-size:11px;padding:6px 10px}
+    /* controls drawer a bit wider for touch */
+    .rail{width:86vw;max-width:330px}
+    /* leaderboard narrower; keep zoom clear of it */
+    .board{width:148px;max-height:38vh}
+    .board h3{font-size:9px;padding:8px 9px 7px}
+    .brow{padding:6px 9px}
+    .brn{font-size:11px}.brs{font-size:11px}
+    .leaflet-top.leaflet-right{right:156px}
+    /* compact legends */
+    .legend,.denslegend{width:150px}
+    .legend .lt,.denslegend .lt{font-size:9px}
+    /* detail card */
+    .card{width:min(330px,92vw)}
+    /* intro / source modals */
+    .modalcard{padding:18px 18px;max-width:92vw}
+    .modalcard h2{font-size:18px}
+    .modalcard p,.modalcard li{font-size:12.5px;line-height:1.5}
+    .modalcard .go{font-size:13px;padding:11px 16px}
+    /* footer compact */
+    .foot{font-size:8px;padding:5px 8px;gap:6px}
+  }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <button class="railtoggle" id="railToggle">&#9776; Controls</button>
+    <img class="logo" src="logo.jpg" alt="Trinity Development Group"/>
+    <div class="brand">
+      <div class="eyebrow">Site Intelligence</div>
+      <h1>Canadian Metro Markets &mdash; CMA Heat Map</h1>
+    </div>
+    <div class="spacer"></div>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="metro" title="Compare whole metro areas by your weighted score">Metro Markets</button>
+      <button class="tab" data-tab="neigh" title="Drill into neighbourhoods: income, density, ownership and more">Neighbourhoods</button>
+      <button class="tab" data-tab="gta" title="Greater Toronto Area municipalities by demographics">GTA Cities</button>
+    </div>
+    <input id="cmaSearch" class="cmasearch" list="cmaList" placeholder="Jump to metro&hellip;" autocomplete="off"/>
+    <datalist id="cmaList"></datalist>
+    <span class="addrwrap">
+      <input id="addrSearch" class="addrsearch" placeholder="Find an address&hellip;" autocomplete="off"/>
+      <button id="addrGo" class="addrgo" title="Locate address & show its census-tract profile">Locate</button>
+      <div id="addrSugg" class="addrsugg" style="display:none"></div>
+    </span>
+    <span id="addrStatus" class="addrstatus" style="display:none"></span>
+    <button id="copyLink" class="copybtn" title="Copy a link to this exact view — tab, weighting mix &amp; focused city">&#128279; Link</button>
+    <button id="addPin" class="copybtn" title="Drop a note pin on a site under review, then click the map">&#128205; Note</button>
+    <button id="notesBtn" class="copybtn" title="Your saved site notes">Notes</button>
+    <div id="hiddenToggles" style="display:none">
+      <button id="densToggle" class="densbtn"></button>
+      <button id="demoToggle" class="densbtn demobtn"></button>
+    </div>
+  </div>
+  <div class="body">
+    <div class="rail" id="rail">
+      <div class="secthead">Variables &amp; weighting <button id="railCollapse" class="railcollapsebtn" title="Hide this panel">&laquo;</button></div>
+      <div class="mixwrap">
+        <div class="mixhead"><span class="t">Weighting mix <span class="infoi" title="Composite score: your weighted blend of the selected variables, scaled 0–100; higher = more attractive">&#9432;</span></span><span class="h">share of active score</span></div>
+        <div class="mixbar" id="mixbar"></div>
+        <div class="mixleg" id="mixleg"></div>
+      </div>
+      <div id="metrics"></div>
+      <div class="presetrow">
+        <label for="presetSel">Preset</label>
+        <select id="presetSel" title="Quick weighting mixes — sliders stay fully editable">
+          <option value="">Custom&hellip;</option>
+          <option value="balanced">Balanced</option>
+          <option value="growth">Growth &amp; jobs</option>
+          <option value="afford">Affordability</option>
+          <option value="safety">Safety first</option>
+        </select>
+      </div>
+      <div class="railbtns">
+        <button id="resetW">Reset weights</button>
+        <button id="allOn">All on</button>
+        <button id="allOff">All off</button>
+      </div>
+      <div class="secthead">Saved scenarios</div>
+      <div class="scenwrap">
+        <div class="scenrow">
+          <input id="scenName" class="sceninput" placeholder="Name this weighting&hellip;" autocomplete="off"/>
+          <button id="scenSave" class="scenbtn">Save</button>
+        </div>
+        <div id="scenList" class="scenlist"></div>
+      </div>
+      <div class="secthead">Data coverage</div>
+      <div class="cov" id="cov"></div>
+    </div>
+    <div class="mapwrap">
+      <div id="map"></div>
+      <button class="railreopen" id="railReopen" title="Show the Variables &amp; weighting panel">Variables &#9656;</button>
+      <div class="guide" id="guide">
+        <div class="ctrlbar" id="ctrlbar">
+          <div class="ctrlgrp" data-for="metro">
+            <div class="modeswitch scoremode">
+              <button data-mode="composite" class="on">Composite score</button>
+              <button data-mode="solo">Single variable</button>
+            </div>
+            <select id="soloSel" class="cgsel" style="display:none"></select>
+            <span class="cghint">&larr; Adjust the weighting sliders on the left to change the score</span>
+          </div>
+          <div class="ctrlgrp" data-for="neigh" style="display:none">
+            <span class="cglab">Colour by</span>
+            <select id="tractSel" class="cgsel"></select>
+            <span class="cglab">Focus city</span>
+            <div class="modeswitch geoswitch">
+              <button data-geo="canada" class="on">All Canada</button>
+              <button data-geo="toronto">Toronto</button>
+              <button data-geo="calgary">Calgary</button>
+              <button data-geo="vancouver">Vancouver</button>
+              <button data-geo="edmonton">Edmonton</button>
+              <button data-geo="ottawa">Ottawa</button>
+              <button data-geo="montreal">Montréal</button>
+            </div>
+            <span class="cglab nsc" style="display:none">Score</span>
+            <div class="modeswitch nscoremode nsc" style="display:none">
+              <button data-nmode="composite" class="on">Composite</button>
+              <button data-nmode="solo">Single</button>
+            </div>
+            <select id="soloSelN" class="cgsel nsc" style="display:none"></select>
+            <div id="nweights" class="nweights nsc" style="display:none"></div>
+          </div>
+          <div class="ctrlgrp" data-for="gta" style="display:none">
+            <span class="cglab">Colour by</span>
+            <select id="demoSel" class="cgsel"></select>
+          </div>
+          <button id="transitToggle" class="transitbtn" style="display:none">&#9210; Transit</button>
+          <button id="trafficToggle" class="trafficbtn" style="display:none" title="Traffic volumes (AADT) on Ontario provincial highways, 2019">&#8776; Traffic</button>
+        </div>
+        <div class="now"><span class="nowdot"></span><span id="guideNow">Loading&hellip;</span></div>
+      </div>
+      <button class="homebtn" id="homeBtn" title="Reset to the national map">&#8962;</button>
+      <button class="helpbtn" id="helpBtn" title="How to use this map">?</button>
+      <div class="modal" id="welcome">
+        <div class="modalcard">
+          <h2>Canada Site Intelligence</h2>
+          <p>A map of Canadian real-estate market data, from whole metro areas right down to individual neighbourhoods. Three tabs, three questions:</p>
+          <ul>
+            <li><span class="em">&#127809;</span><b>Metro Markets</b> &mdash; compare whole metros on a score you control with the weighting sliders.</li>
+            <li><span class="em">&#127968;</span><b>Neighbourhoods</b> &mdash; zoom into any metro (or pick a focus city) for income, density and ownership block by block.</li>
+            <li><span class="em">&#127760;</span><b>GTA Cities</b> &mdash; Greater Toronto municipalities by income, diversity and more.</li>
+          </ul>
+          <p style="margin-bottom:14px">The <b>&ldquo;Now showing&rdquo;</b> line under the tabs always says, in plain words, what the colours mean. Brighter green = better, deeper red = worse.</p>
+          <button class="go" id="welcomeGo">Start exploring</button>
+        </div>
+      </div>
+      <div class="modal hidden" id="sources">
+        <div class="modalcard srcs">
+          <h2>Data &amp; sources</h2>
+          <p>Every metric, its source and vintage. Values are populated only where verified; gaps are left blank rather than estimated.</p>
+          <div class="srcgrp">Metro markets &middot; 41 CMAs</div>
+          <div class="srcrow"><span class="sname">Population growth</span><span class="sdesc">2016&ndash;2021 Census of Population change.</span></div>
+          <div class="srcrow"><span class="sname">Crime severity</span><span class="sdesc"><b>2024 StatCan Crime Severity Index</b> &mdash; weighted measure of police-reported crime. Oshawa excluded by StatCan (policing-boundary mismatch).</span></div>
+          <div class="srcrow"><span class="sname">Rapid transit</span><span class="sdesc">Rail service tier (0&ndash;3): rail / LRT / commuter, scored against the present-day network.</span></div>
+          <div class="srcrow"><span class="sname">Poverty rate</span><span class="sdesc">CFLIM-AT, <b>2023</b> (StatCan T1FF table 11-10-0018) &mdash; after-tax low-income measure.</span></div>
+          <div class="srcrow"><span class="sname">Median income</span><span class="sdesc">Median total income, <b>2023</b> (StatCan T1FF table 11-10-0008).</span></div>
+          <div class="srcrow"><span class="sname">Property tax</span><span class="sdesc">Residential rate &mdash; Ontario <b>2023</b>, all other metros <b>2025</b> (WOWA / municipal sources). Quebec metros use city-wide aggregate residential rates (medium confidence).</span></div>
+          <div class="srcgrp">Neighbourhoods &middot; curated cities</div>
+          <div class="srcrow"><span class="sname">Crime /100k</span><span class="sdesc">City police open data &mdash; Toronto (TPS, 2019), Calgary (CPS, 2024), Vancouver (VPD, 2024), Edmonton (EPS, 2025), Ottawa (OPS, 2025), Montr&eacute;al (SPVM, 2025). <b>Per-city only &mdash; not comparable across cities</b> (different offence definitions).</span></div>
+          <div class="srcrow"><span class="sname">Income</span><span class="sdesc">2016 census (Toronto, Vancouver, Edmonton); Calgary is <b>ward-level</b> (2015, 14 wards); Ottawa median household 2020; Montr&eacute;al 2021 census tracts aggregated.</span></div>
+          <div class="srcrow"><span class="sname">Low income (LIM-AT)</span><span class="sdesc">Share below StatCan&rsquo;s after-tax low-income line &mdash; <b>2021 census tracts</b>, consistent across all six cities.</span></div>
+          <div class="srcgrp">Census tracts &amp; demographics</div>
+          <div class="srcrow"><span class="sname">Tract variables</span><span class="sdesc"><b>2021 Census</b> &mdash; income, dwelling value, ownership, immigration, visible minority, education, employment, age, population &amp; density (6,052 tracts).</span></div>
+          <div class="srcrow"><span class="sname">Rent-to-income</span><span class="sdesc">Median monthly rent (StatCan char. 1480) &times; 12 &divide; median household income, <b>2021</b>. Higher = less affordable.</span></div>
+          <div class="srcrow"><span class="sname">GTA municipalities</span><span class="sdesc"><b>2021 Census</b> demographics, 55 Greater Toronto municipalities.</span></div>
+          <button class="go" id="sourcesGo">Got it</button>
+        </div>
+      </div>
+      <div class="modal hidden" id="notes">
+        <div class="modalcard">
+          <h2>Site notes</h2>
+          <p>Pins you&rsquo;ve dropped on sites under review. They&rsquo;re saved in this browser and restore automatically when you reopen the map.</p>
+          <div id="notesList" class="scenlist notesmlist"></div>
+          <button class="go" id="notesGo">Close</button>
+        </div>
+      </div>
+      <div class="card" id="card"></div>
+      <div class="tkey" id="transitKey" style="display:none"></div>
+      <div class="legend" id="compLegend">
+        <span class="legchev">&#9662;</span>
+        <div class="lt" id="legTitle">Composite opportunity</div>
+        <div class="legbar"></div>
+        <div class="legsc"><span>0</span><span>50</span><span>100</span></div>
+        <div class="legnote"><i></i>hollow = no data for active variables &middot; circle size = population</div>
+      </div>
+      <div class="board">
+        <h3><span id="boardLabel">Ranked markets</span> <span id="boardMode">composite</span><button id="exportBtn" class="exportbtn" title="Download current ranking as CSV">Export CSV</button><button id="boardCollapse" class="panelcollapse" title="Collapse / expand the list">&#9662;</button></h3>
+        <div class="boardlist" id="board"></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <button id="sourcesBtn" class="srcbtn" title="Full list of data sources &amp; vintages">&#9432; Data &amp; sources</button>
+    <button id="exportPng" class="srcbtn" title="Save the current map view as a PNG image">&#10515; PNG</button>
+    <button id="exportPdf" class="srcbtn" title="Save the current map view as a PDF">&#10515; PDF</button>
+    <span>Growth: 2016&ndash;21 census &middot; CSI: 2024 StatCan &middot; Poverty: CFLIM-AT 2023 &middot; Tax: residential (ON 2023, rest 2025) &middot; Transit: rail tier &middot; Income: median total, 2023 (T1FF)</span>
+    <span>41 CMAs &middot; values populated where verified</span>
+  </div>
+</div>
+<script src="site_intelligence_data.js"></script>
+<script>
+
+const METRICS = [
+  {key:'growth', label:'Population growth', unit:'%', dir:1,  blurb:'2016\u201321 census change', defW:30},
+  {key:'csi',    label:'Crime severity',    unit:'',  dir:-1, blurb:'2024 StatCan CSI index',  defW:25, info:'Crime Severity Index — StatCan’s weighted measure of police-reported crime; higher = more/severe crime'},
+  {key:'transit',label:'Rapid transit',     unit:'/3',dir:1,  blurb:'rail/LRT/commuter tier',  defW:20, cat:true, cmax:3, info:'Rapid transit tier — 0–3 scale: rail/LRT/commuter service level'},
+  {key:'poverty',label:'Poverty rate',      unit:'%', dir:-1, blurb:'CFLIM-AT 2023 (T1FF)',  defW:10},
+  {key:'income', label:'Median income',     unit:'$', dir:1,  blurb:'median total income, 2023 (T1FF)',defW:10},
+  {key:'tax',    label:'Property tax',      unit:'%', dir:-1, blurb:'residential rate (ON 2023, rest 2025)',   defW:5},
+];
+const TRANSIT_LBL={0:'None',1:'Limited rail',2:'LRT / commuter',3:'Metro + commuter'};
+const MC={growth:'#46b3a8',csi:'#e8623a',transit:'#d9a441',poverty:'#9b6bd4',income:'#5b8def',tax:'#c08457'};
+const COMPOSITE_DEF='Your weighted blend of the selected variables, scaled 0–100; higher = more attractive';
+const state={mode:'composite', solo:'growth', on:{}, w:{}, nw:{csi:50,income:50,poverty:50}, non:{csi:true,income:true,poverty:true}};
+METRICS.forEach(m=>{state.on[m.key]=true; state.w[m.key]=m.defW;});
+
+// ---- color scale ----
+const STOPS=[[0,'#7a0015'],[25,'#e01f2e'],[50,'#ffc31c'],[75,'#7fe024'],[100,'#1dff5c']];
+function hx(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function lerp(a,b,t){return Math.round(a+(b-a)*t);}
+function color(v){ // v 0..100
+  if(v==null||isNaN(v)) return null;
+  v=Math.max(0,Math.min(100,v));
+  for(let i=0;i<STOPS.length-1;i++){
+    const[s0,c0]=STOPS[i],[s1,c1]=STOPS[i+1];
+    if(v>=s0&&v<=s1){const t=(v-s0)/(s1-s0||1);const a=hx(c0),b=hx(c1);
+      return `rgb(${lerp(a[0],b[0],t)},${lerp(a[1],b[1],t)},${lerp(a[2],b[2],t)})`;}
+  }
+  return STOPS[STOPS.length-1][1];
+}
+
+// ---- normalization ----
+function ranges(){
+  const r={};
+  METRICS.forEach(m=>{
+    const vals=CMA.map(c=>c[m.key]).filter(v=>v!=null);
+    r[m.key]={min:Math.min(...vals),max:Math.max(...vals)};
+  });
+  return r;
+}
+const R=ranges();
+function norm(m,v){ // -> 0..1, higher = more attractive
+  if(v==null) return null;
+  if(m.cat) return v/m.cmax;
+  const {min,max}=R[m.key]; let n=(max===min)?0.5:(v-min)/(max-min);
+  return m.dir<0 ? 1-n : n;
+}
+function composite(c){
+  let sw=0, acc=0, used=0, tot=0;
+  METRICS.forEach(m=>{
+    if(!state.on[m.key]) return;
+    const w=state.w[m.key]; if(w<=0) return;
+    tot++;
+    const n=norm(m,c[m.key]);
+    if(n==null) return;
+    sw+=w; acc+=w*n; used++;
+  });
+  if(sw<=0) return {score:null,used,tot};
+  return {score:Math.round(acc/sw*100), used, tot};
+}
+function soloScore(c){const m=METRICS.find(x=>x.key===state.solo);const n=norm(m,c[m.key]);return n==null?null:Math.round(n*100);}
+function scoreFor(c){return state.mode==='composite'?composite(c).score:soloScore(c);}
+
+// ---- map ----
+
+const map=L.map('map',{zoomControl:false,attributionControl:false,minZoom:3,maxZoom:15,zoomSnap:.25}).setView([60,-96],3.4);
+const zoomCtl=L.control.zoom({position:'topright'}).addTo(map);  // moved off the bottom-right so it no longer covers the board / help button
+const glRenderer=L.canvas({padding:.5});
+const provLayer=L.geoJSON(PROV,{interactive:false,style:()=>({className:'prov'})}).addTo(map);
+const cmaLayer=L.layerGroup().addTo(map);
+const transitLayer=L.layerGroup(); let transitOn=false; let _tkCollapsed=false;
+function _hav(a,b,c,d){const R=6371,t=Math.PI/180,x=(c-a)*t,y=(d-b)*t,u=Math.sin(x/2)**2+Math.cos(a*t)*Math.cos(c*t)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(u));}
+// brighten any colour to a vivid "neon" version of the SAME hue
+function _neon(hex){ hex=(hex||'#888888').replace('#',''); if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
+  let r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h=0,s=0,l=(mx+mn)/2;
+  if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);
+    h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h/=6;}
+  if(s>0.12){ s=Math.max(s,0.95); l=Math.min(Math.max(l,0.56),0.66); }   // vivid for colourful lines
+  else { l=Math.min(Math.max(l,0.72),0.82); }                            // near-greys (e.g. Line 6) stay silver, just brightened
+  const hue=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+  const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;
+  const R=Math.round(hue(p,q,h+1/3)*255),G=Math.round(hue(p,q,h)*255),B=Math.round(hue(p,q,h-1/3)*255);
+  return '#'+[R,G,B].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+function buildTransit(key){transitLayer.clearLayers();const t=TRANSIT[key];if(!t)return;
+  t.lines.forEach(ln=>{const segs=ln.multi?ln.coords:[ln.coords];const dash=ln.dash||null;const nc=_neon(ln.color);segs.forEach(seg=>{
+    const ll=seg.map(c=>[c[1],c[0]]);
+    L.polyline(ll,{renderer:glRenderer,color:'#0a0f16',weight:dash?5:6,opacity:.5,lineCap:'round',lineJoin:'round'}).addTo(transitLayer);   // thin dark casing for contrast (no glow)
+    L.polyline(ll,{renderer:glRenderer,color:nc,weight:dash?2.8:3.6,opacity:1,className:'rail',lineCap:'round',lineJoin:'round',dashArray:dash}).addTo(transitLayer);});});  // bright solid core line
+  t.stations.forEach(s=>{L.circleMarker([s[1],s[0]],{renderer:glRenderer,radius:3.1,color:'#04222b',weight:1.2,fillColor:'#f2ffff',fillOpacity:1,className:'rail'})
+    .bindTooltip(s[2],{direction:'top',className:'ntip',opacity:1}).addTo(transitLayer);});}
+function nearestStation(f){const t=TRANSIT[curKey()];if(!t||!activeCity)return'';
+  const l=activeCity.layers[f.properties.name];if(!l)return'';const c=l.getBounds().getCenter();
+  let best=1e9,bn='';t.stations.forEach(s=>{const d=_hav(c.lat,c.lng,s[1],s[0]);if(d<best){best=d;bn=s[2];}});
+  if(bn==='')return'';return '\uD83D\uDE87 '+best.toFixed(best<1?2:1)+' km to '+bn;}
+function setTransit(on){transitOn=on;const b=document.getElementById('transitToggle');if(b)b.classList.toggle('on',on);
+  const tk=document.getElementById('transitKey');
+  if(on&&activeCity){transitLayer.addTo(map);buildTransitKey(curKey());if(tk)tk.style.display='';}
+  else{map.removeLayer(transitLayer);if(tk)tk.style.display='none';}
+  if(activeCity&&activeCity.layer)activeCity.layer.setStyle(styleNeigh);
+  if(activeNeigh&&activeCity&&activeCity.feat[activeNeigh])showNeighCard(activeCity.feat[activeNeigh]);}
+function transitGroups(key){const t=TRANSIT[key];if(!t)return[];const m=new Map();
+  t.lines.forEach(ln=>{const label=ln.name.indexOf('GO ')===0?'GO Transit':ln.name;
+    if(!m.has(label))m.set(label,{label:label,color:_neon(ln.color),dash:!!ln.dash});});
+  return[...m.values()];}
+function buildTransitKey(key){const el=document.getElementById('transitKey');if(!el)return;const t=TRANSIT[key];if(!t)return;
+  const gs=transitGroups(key);let hasDash=false;
+  const rows=gs.map(g=>{if(g.dash)hasDash=true;const sw=g.dash
+    ?'background:repeating-linear-gradient(90deg,'+g.color+' 0 4px,transparent 4px 7px)'
+    :'background:'+g.color;
+    return '<div class="tkr"><span class="tks" style="'+sw+'"></span>'+g.label+'</div>';}).join('');
+  el.innerHTML='<div class="tkh">Transit lines<span class="tkchev">\u25be</span></div>'+rows+
+    (hasDash?'<div class="tkn">solid = rapid transit \u00b7 dashed = commuter rail</div>':'');
+  el.classList.toggle('collapsed',_tkCollapsed);}
+
+map.fitBounds([[42,-141],[70,-52]],{padding:[10,10]});
+
+let markers={};
+function rad(pop){const mx=Math.sqrt(6202225);return 5+Math.sqrt(pop)/mx*22;}
+CMA.forEach(c=>{
+  const mk=L.circleMarker([c.lat,c.lng],{radius:rad(c.pop),weight:1.4,color:'#0c121d',fillOpacity:.92})
+    .addTo(cmaLayer).on('click',()=>showCard(c)).on('mouseover',function(){this.setStyle({weight:2.4,color:'#e8eef6'});})
+    .on('mouseout',function(){this.setStyle({weight:1.4,color:'#0c121d'});});
+  markers[c.name]=mk;
+});
+
+function paint(){
+  CMA.forEach(c=>{
+    const s=scoreFor(c); const col=color(s); c._score=s;
+    const mk=markers[c.name];
+    if(col){mk.setStyle({fillColor:col,fillOpacity:.92,dashArray:null,color:'#0c121d'});}
+    else{mk.setStyle({fillColor:'#1b2735',fillOpacity:.12,dashArray:'2 3',color:'#56687d'});}
+  });
+  buildBoard();
+}
+
+// ---- detail card ----
+let activeCard=null;
+function showCard(c){
+  activeCard=c.name;
+  const comp=composite(c); const s=scoreFor(c);
+  const ring=color(s)||'#56687d';
+  let rows=METRICS.map(m=>{
+    const v=c[m.key]; const n=norm(m,v); const active=state.on[m.key];
+    let disp='\u2014';
+    if(v!=null){
+      if(m.cat) disp=TRANSIT_LBL[v];
+      else if(m.key==='income') disp='$'+v.toLocaleString();
+      else if(m.key==='tax') disp=v.toFixed(3)+'%';
+      else disp=v+m.unit;
+    }
+    const bar=n==null?'':`<div class="mlb"><span style="width:${Math.round(n*100)}%;background:${color(n*100)}"></span></div>`;
+    return `<div class="ml ${v==null?'na':''}" style="opacity:${active?1:.45}">
+      <span class="mln">${m.label} <small style="color:var(--muted2)">${m.dir>0?'\u2191':'\u2193'}</small></span>
+      ${bar}<span class="mlv">${disp}</span></div>`;
+  }).join('');
+  document.getElementById('card').innerHTML=`
+    <span class="cardx" onclick="hideCard()">\u00d7</span>
+    <div class="cardh"><span class="nm">${c.name}</span><span class="pv">${c.prov}</span></div>
+    <div class="cardsub">${c.pop.toLocaleString()} pop \u00b7 ${c.prov} CMA</div>
+    <div class="scorebig">
+      <div class="ring" style="background:${ring}">${s==null?'\u2014':s}</div>
+      <div><div class="sl">${state.mode==='composite'?'Composite opportunity'+_ii(COMPOSITE_DEF):METRICS.find(m=>m.key===state.solo).label}</div>
+      <div class="sd">${state.mode==='composite'?(comp.used+' of '+comp.tot+' active variables with data'):'normalized 0\u2013100'}</div></div>
+    </div>
+    <div class="mlist">${rows}</div>`;
+  document.getElementById('card').classList.add('show');
+  buildBoard();
+}
+function hideCard(){activeCard=null;document.getElementById('card').classList.remove('show');buildBoard();}
+window.hideCard=hideCard;
+
+// ---- leaderboard ----
+function buildBoard(){
+  const rk=CMA.map(c=>({c,s:c._score})).filter(x=>x.s!=null).sort((a,b)=>b.s-a.s);
+  const el=document.getElementById('board');
+  el.innerHTML=rk.map((x,i)=>`
+    <div class="brow ${x.c.name===activeCard?'hot':''}" data-name="${x.c.name}">
+      <span class="brk">${String(i+1).padStart(2,'0')}</span>
+      <span class="swatch" style="background:${color(x.s)}"></span>
+      <span class="brn">${x.c.name}<div class="brnp">${x.c.prov}</div></span>
+      <span class="brs" style="color:${color(x.s)}">${x.s}</span>
+    </div>`).join('');
+  el.querySelectorAll('.brow').forEach(row=>row.onclick=()=>__pick(row.dataset.name));
+}
+function __pick(nm){const c=CMA.find(x=>x.name===nm);if(c){map.setView([c.lat,c.lng],Math.max(map.getZoom(),5),{animate:true});showCard(c);}}
+
+// ---- controls UI ----
+function buildMetrics(){
+  document.getElementById('metrics').innerHTML=METRICS.map(m=>`
+    <div class="metric ${state.on[m.key]?'':'off'}" id="met-${m.key}">
+      <div class="mrow1">
+        <div class="chk ${state.on[m.key]?'on':''}" data-tog="${m.key}">
+          <svg viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#1a1205" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span class="mname" data-tog="${m.key}">${m.label}</span>${m.info?_ii(m.info):''}
+        <span class="dir ${m.dir>0?'good':'bad'}">${m.dir>0?'higher \u2191':'lower \u2193'}</span>
+      </div>
+      <div class="mblurb">${m.blurb}</div>
+      <div class="wrap">
+        <input type="range" min="0" max="100" value="${state.w[m.key]}" data-w="${m.key}" ${state.on[m.key]?'':'disabled'}>
+        <input type="number" class="wnum" min="0" max="100" step="1" value="${state.w[m.key]}" id="wv-${m.key}" data-wn="${m.key}" ${state.on[m.key]?'':'disabled'}>
+        <span class="wpct">%</span>
+      </div>
+      <div class="share" id="sh-${m.key}"></div>
+    </div>`).join('');
+  document.querySelectorAll('[data-tog]').forEach(el=>el.onclick=()=>toggle(el.dataset.tog));
+  document.querySelectorAll('[data-w]').forEach(el=>el.oninput=()=>{
+    const k=el.dataset.w; state.w[k]=+el.value;
+    const n=document.getElementById('wv-'+k); if(n) n.value=el.value; clearPreset(); refresh();});
+  document.querySelectorAll('[data-wn]').forEach(el=>{
+    el.oninput=()=>{const k=el.dataset.wn; let r=parseInt(el.value,10); if(isNaN(r)) return;
+      let v=Math.max(0,Math.min(100,r)); state.w[k]=v;
+      const sl=document.querySelector('[data-w="'+k+'"]'); if(sl) sl.value=v; clearPreset(); refresh();};
+    el.onchange=()=>{const k=el.dataset.wn; el.value=state.w[k];};});
+}
+function toggle(k){state.on[k]=!state.on[k];
+  const met=document.getElementById('met-'+k);met.classList.toggle('off',!state.on[k]);
+  met.querySelector('.chk').classList.toggle('on',state.on[k]);
+  met.querySelector('[data-w]').disabled=!state.on[k];
+  met.querySelector('[data-wn]').disabled=!state.on[k];
+  clearPreset();refresh();}
+function refresh(){updateMix();syncShare();if(activeCity&&activeCity.layer){NR=cityRanges(activeCity);activeCity.layer.setStyle(styleNeigh);buildNeighBoard();if(activeNeigh&&activeCity.feat[activeNeigh])showNeighCard(activeCity.feat[activeNeigh]);return;}paint();if(activeCard){const c=CMA.find(x=>x.name===activeCard);if(c)showCard(c);}}
+
+function updateMix(){
+  const active=METRICS.filter(m=>state.on[m.key]&&state.w[m.key]>0);
+  const sum=active.reduce((a,m)=>a+state.w[m.key],0);
+  METRICS.forEach(m=>{
+    const el=document.getElementById('sh-'+m.key); if(!el) return;
+    if(!state.on[m.key]){el.innerHTML='<span style="color:var(--muted2)">off &mdash; excluded from score</span>';return;}
+    if(sum<=0){el.innerHTML='<span style="color:var(--muted2)">0% &mdash; add weight</span>';return;}
+    const sh=Math.round(state.w[m.key]/sum*100);
+    el.innerHTML=`<span class="sbar" style="width:${Math.max(3,sh*1.15)}px;background:${MC[m.key]}"></span><span><b>${sh}%</b> of score</span>`;
+  });
+  const bar=document.getElementById('mixbar'), leg=document.getElementById('mixleg');
+  if(sum<=0){bar.innerHTML='';leg.innerHTML='<div class="mixempty">No active weight &mdash; toggle a variable on</div>';return;}
+  bar.innerHTML=active.map(m=>`<span style="flex:${state.w[m.key]} 0 0;background:${MC[m.key]}" title="${m.label}"></span>`).join('');
+  leg.innerHTML=METRICS.map(m=>{
+    const on=state.on[m.key]&&state.w[m.key]>0;
+    const sh=on?Math.round(state.w[m.key]/sum*100):0;
+    return `<span class="chip ${on?'':'dim'}"><i style="background:${MC[m.key]}"></i>${m.label} <b>${sh}%</b></span>`;
+  }).join('');
+}
+
+document.querySelectorAll('.scoremode button').forEach(b=>b.onclick=()=>{
+  state.mode=b.dataset.mode;
+  document.querySelectorAll('.scoremode button').forEach(x=>x.classList.toggle('on',x===b));
+  const solo=state.mode==='solo';
+  document.getElementById('soloSel').style.display=solo?'block':'none';
+  if(inNeighContext()){ neighLabels(); } else {
+    document.getElementById('legTitle').textContent=solo?METRICS.find(m=>m.key===state.solo).label:'Composite opportunity';
+    document.getElementById('boardMode').textContent=solo?state.solo:'composite'; }
+  refresh();
+});
+// Only crime, income and low-income exist at neighbourhood level; restrict the
+// single-variable picker to whatever the current context actually has data for.
+const NEIGH_KEYS=['csi','income','poverty'];
+function inNeighContext(){ return state.geo!=='canada' || (typeof revealKey!=='undefined' && !!revealKey); }
+function soloOptionsFor(){ return inNeighContext() ? METRICS.filter(m=>NEIGH_KEYS.indexOf(m.key)>=0) : METRICS; }
+function rebuildSoloSel(){ const sel=document.getElementById('soloSel'); if(!sel) return;
+  const opts=soloOptionsFor(); if(!opts.find(m=>m.key===state.solo)) state.solo=opts[0].key;
+  sel.innerHTML=opts.map(m=>`<option value="${m.key}">${m.label}</option>`).join(''); sel.value=state.solo; }
+const ss=document.getElementById('soloSel');
+ss.onchange=()=>{state.solo=ss.value;
+  if(inNeighContext()){ neighLabels(); } else {
+    document.getElementById('legTitle').textContent=METRICS.find(m=>m.key===state.solo).label;
+    document.getElementById('boardMode').textContent=state.solo; }
+  refresh();};
+
+// ---- neighbourhood composite controls (Neighbourhoods tab) ----
+const NWLBL={csi:'Crime',income:'Income',poverty:'Low-inc'};
+function buildNWeights(){const el=document.getElementById('nweights');if(!el)return;
+  el.innerHTML=NMETS.map(nm=>`<span class="nwt" data-nk="${nm.key}"><span class="nwx" data-ntog="${nm.key}" title="toggle">${state.non[nm.key]?'◉':'○'}</span>${NWLBL[nm.key]} <small>${nm.dir>0?'↑':'↓'}</small><input type="range" min="0" max="100" value="${state.nw[nm.key]}" data-nw="${nm.key}" ${state.non[nm.key]?'':'disabled'}></span>`).join('');
+  el.querySelectorAll('[data-nw]').forEach(r=>{r.oninput=()=>{state.nw[r.dataset.nw]=+r.value;refresh();};});
+  el.querySelectorAll('[data-ntog]').forEach(x=>{x.onclick=()=>{const k=x.dataset.ntog;state.non[k]=!state.non[k];buildNWeights();refresh();};});}
+function rebuildSoloSelN(){const sel=document.getElementById('soloSelN');if(!sel)return;
+  sel.innerHTML=NMETS.map(nm=>`<option value="${nm.key}">${nm.lbl}</option>`).join('');
+  if(!NMETS.find(nm=>nm.key===state.solo))state.solo=NMETS[0].key; sel.value=state.solo;}
+function syncNeighScoreUI(){const show=state.geo!=='canada';
+  document.querySelectorAll('.nsc').forEach(e=>{e.style.display=show?'':'none';});
+  if(!show)return;const solo=state.mode==='solo';
+  const sn=document.getElementById('soloSelN');if(sn)sn.style.display=solo?'':'none';
+  const nw=document.getElementById('nweights');if(nw)nw.style.display=solo?'none':'';
+  document.querySelectorAll('.nscoremode button').forEach(b=>b.classList.toggle('on',b.dataset.nmode===state.mode));}
+document.querySelectorAll('.nscoremode button').forEach(b=>b.onclick=()=>{state.mode=b.dataset.nmode;rebuildSoloSelN();syncNeighScoreUI();neighLabels();refresh();});
+{const sn=document.getElementById('soloSelN');if(sn)sn.onchange=()=>{state.solo=sn.value;neighLabels();refresh();};}
+
+// ---- shareable view state via URL hash ----
+let _shareT=null,_loadingShare=false;
+function viewState(){const app=document.getElementById('app');return {t:app?app.getAttribute('data-tab'):'metro',g:state.geo,m:state.mode,s:state.solo,
+  w:METRICS.map(m=>state.on[m.key]?state.w[m.key]:-1).join('.'),
+  nw:NMETS.map(nm=>state.non[nm.key]?state.nw[nm.key]:-1).join('.')};}
+function viewHash(){try{return '#'+btoa(JSON.stringify(viewState()));}catch(e){return location.hash;}}
+function syncShare(){if(_loadingShare)return;clearTimeout(_shareT);_shareT=setTimeout(function(){try{
+  const p=viewState();history.replaceState(null,'','#'+btoa(JSON.stringify(p)));
+  try{localStorage.setItem('si_v',JSON.stringify(p));}catch(e){}
+}catch(e){}},180);}
+function applyPayload(p){ _loadingShare=true;
+  if(p.m)state.mode=p.m;if(p.s)state.solo=p.s;
+  if(p.w)String(p.w).split('.').forEach((v,i)=>{v=+v;const m=METRICS[i];if(!m)return;if(v<0)state.on[m.key]=false;else{state.on[m.key]=true;state.w[m.key]=v;}});
+  if(p.nw)String(p.nw).split('.').forEach((v,i)=>{v=+v;const nm=NMETS[i];if(!nm)return;if(v<0)state.non[nm.key]=false;else{state.non[nm.key]=true;state.nw[nm.key]=v;}});
+  buildMetrics();buildNWeights();
+  setTab(p.t||'metro');
+  if(p.g&&p.g!=='canada')setGeo(p.g);
+  _loadingShare=false; }
+function applyShare(){try{const h=decodeURIComponent(location.hash.slice(1));if(!h)return false;applyPayload(JSON.parse(atob(h)));return true;}catch(e){_loadingShare=false;return false;}}
+function applyStored(){try{const s=localStorage.getItem('si_v');if(!s)return false;applyPayload(JSON.parse(s));return true;}catch(e){_loadingShare=false;return false;}}
+
+// ---- export current ranking to CSV ----
+function exportBoard(){try{
+  let head,rows,title,wline;const esc=v=>{v=(v==null?'':''+v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  if(activeCity){title=activeCity.label.replace(/\W+/g,'_')+'_neighbourhoods';
+    wline='# '+activeCity.label+' · '+(state.mode==='solo'?'single: '+((NMETS.find(n=>n.key===state.solo)||{}).lbl||''):'composite weights: '+NMETS.filter(nm=>state.non[nm.key]).map(nm=>NWLBL[nm.key]+'='+state.nw[nm.key]).join(' '));
+    head=['rank','neighbourhood','population','score'].concat(NMETS.map(nm=>nm.lbl));
+    rows=neighRank().map((x,i)=>[i+1,x.n,x.f.properties.pop||'',x.s].concat(NMETS.map(nm=>x.f.properties[nm.prop])));
+  }else{title='canadian_metro_markets';
+    wline='# Metro markets · '+(state.mode==='solo'?'single: '+((METRICS.find(m=>m.key===state.solo)||{}).label||''):'composite weights: '+METRICS.filter(m=>state.on[m.key]).map(m=>m.label+'='+state.w[m.key]).join(' '));
+    head=['rank','metro','province','score'].concat(METRICS.map(m=>m.label));
+    rows=CMA.map(c=>({c,s:c._score})).filter(x=>x.s!=null).sort((a,b)=>b.s-a.s).map((x,i)=>[i+1,x.c.name,x.c.prov,x.s].concat(METRICS.map(m=>x.c[m.key])));}
+  const csv=[wline,head.join(','),...rows.map(r=>r.map(esc).join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=title+'_'+state.mode+'.csv';document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+}catch(e){alert('Export failed: '+e.message);}}
+{const eb=document.getElementById('exportBtn');if(eb)eb.onclick=exportBoard;}
+
+// ---- weighting presets (session 4) ----
+const PRESETS={
+  balanced:{growth:30,csi:25,transit:20,poverty:10,income:10,tax:5},   // current defaults
+  growth:  {growth:40,transit:25,income:15,csi:10,poverty:5, tax:5},   // heavy growth + transit
+  afford:  {income:35,tax:25,poverty:20,growth:10,transit:5, csi:5},   // heavy income + tax, lighter growth
+  safety:  {csi:40,poverty:30,growth:10,income:10,transit:5, tax:5},   // heavy crime + poverty
+};
+function clearPreset(){var p=document.getElementById('presetSel');if(p)p.value='';}
+{const ps=document.getElementById('presetSel'); if(ps) ps.onchange=function(){
+  const p=PRESETS[ps.value]; if(!p) return;
+  METRICS.forEach(m=>{state.on[m.key]=true; state.w[m.key]=(p[m.key]!=null?p[m.key]:0);});
+  buildMetrics(); refresh();
+};}
+
+document.getElementById('resetW').onclick=()=>{METRICS.forEach(m=>{state.w[m.key]=m.defW;state.on[m.key]=true;});clearPreset();buildMetrics();refresh();};
+document.getElementById('allOn').onclick=()=>{METRICS.forEach(m=>state.on[m.key]=true);clearPreset();buildMetrics();refresh();};
+document.getElementById('allOff').onclick=()=>{METRICS.forEach(m=>state.on[m.key]=false);clearPreset();buildMetrics();refresh();};
+document.getElementById('railToggle').onclick=()=>document.getElementById('rail').classList.toggle('open');
+
+// ---- collapsible panels (session 3) ----
+function setRailCollapsed(on){var r=document.getElementById('rail');if(r)r.classList.toggle('collapsed',on);
+  var rb=document.getElementById('railReopen');if(rb)rb.style.display=on?'flex':'none';
+  setTimeout(function(){try{map.invalidateSize({pan:false})}catch(e){}},260);}
+{var rc=document.getElementById('railCollapse');if(rc)rc.onclick=function(){setRailCollapsed(true);};
+ var rr=document.getElementById('railReopen');if(rr)rr.onclick=function(){setRailCollapsed(false);};
+ var bc=document.getElementById('boardCollapse');if(bc)bc.onclick=function(){var b=document.querySelector('.board');if(b)b.classList.toggle('collapsed');};
+ var tkEl=document.getElementById('transitKey');if(tkEl)tkEl.addEventListener('click',function(e){if(e.target.closest('.tkh')){tkEl.classList.toggle('collapsed');_tkCollapsed=tkEl.classList.contains('collapsed');}});var compLg=document.querySelector('.legend');if(compLg)compLg.addEventListener('click',function(e){if(e.target.closest('.lt')||(e.target.classList&&e.target.classList.contains('legchev')))compLg.classList.toggle('collapsed');});}
+
+// ---- copy shareable link + home/reset (session 3) ----
+{var cl=document.getElementById('copyLink'); if(cl) cl.onclick=function(){ var url=location.href.split('#')[0]+viewHash();
+   var lbl=cl.getAttribute('data-lbl'); if(!lbl){lbl=cl.innerHTML;cl.setAttribute('data-lbl',lbl);}
+   var done=function(){ cl.innerHTML='✓ Copied'; setTimeout(function(){cl.innerHTML=cl.getAttribute('data-lbl');},1500); };
+   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done,done);}
+   else{try{var t=document.createElement('textarea');t.value=url;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();done();}catch(e){}} };
+ var hbn=document.getElementById('homeBtn'); if(hbn) hbn.onclick=function(){ setTab('metro'); };}
+
+// coverage readout
+function coverage(){
+  document.getElementById('cov').innerHTML=METRICS.map(m=>{
+    const n=CMA.filter(c=>c[m.key]!=null).length;const pct=Math.round(n/41*100);
+    return `<div><b>${m.label}</b> &mdash; ${n}/41</div><div class="covbar"><span style="width:${pct}%"></span></div>`;
+  }).join('')+`<div style="margin-top:6px;color:var(--muted2)">Poverty &amp; income now complete (41/41) from StatCan T1FF tables 11-10-0018 &amp; 11-10-0008, 2023. Oshawa CSI excluded by StatCan (policing-boundary mismatch). Property tax now complete (41/41): Ontario 2023 + all other metros 2025 (WOWA / municipal sources; Quebec metros use city-wide aggregate residential rates).</div>`;
+}
+
+// ---- City neighbourhood drill-down (multi-variable, robust scaling) ----
+state.geo='canada';
+const CITIES={
+  toronto:{label:'Toronto', data:TONEIGH, note:'crime (TPS /100k, 2019) + income (2016 census) + low-income (LIM-AT %, 2021 census tracts)'},
+  calgary:{label:'Calgary', data:CALNEIGH, note:'crime (CPS /100k, 2024) + income at WARD level (2015 census, 14 wards mapped to communities) + low-income (LIM-AT %, 2021 census tracts aggregated to communities)'},
+  vancouver:{label:'Vancouver', data:VANNEIGH, note:'crime (VPD /100k, 2024) + income (2016 census) + low-income (LIM-AT %, 2021 census tracts)'},
+  edmonton:{label:'Edmonton', data:EDMNEIGH, note:'crime (EPS criminal occurrences /100k, 2025, point-in-polygon to neighbourhood, pop 2019 census) + income (2016 census) + low-income (LIM-AT %, 2021 census tracts aggregated to neighbourhoods)'},
+  ottawa:{label:'Ottawa', data:OTTNEIGH, note:'crime (OPS criminal offences /100k, 2025, ONS Gen3 neighbourhoods, pop from 2021 census tracts) + income (median household, 2020) + low-income (LIM-AT %, 2021 census)'},
+  montreal:{label:'Montréal', data:MTLNEIGH, note:'crime (SPVM major criminal offences /100k, 2025 — vehicle theft, break-ins, robbery, mischief, violent; point-in-polygon to 32 quartiers sociologiques) + income & population (2021 census tracts aggregated, pop-weighted) + low-income (LIM-AT %, 2021 census tracts aggregated to quartiers)'},
+};
+const NMETS=[{key:'csi',prop:'crime',dir:-1,lbl:'Crime rate /100k'},
+             {key:'income',prop:'income',dir:1,lbl:'Avg income'},
+             {key:'poverty',prop:'poverty',dir:-1,lbl:'Low income (LIM-AT)'}];
+function pctl(a,q){const s=a.slice().sort((x,y)=>x-y);if(!s.length)return null;const i=(s.length-1)*q,lo=Math.floor(i),hi=Math.ceil(i);return s[lo]+(s[hi]-s[lo])*(i-lo);}
+function cityRanges(city){const R={};NMETS.forEach(nm=>{const v=city.data.features.map(f=>f.properties[nm.prop]).filter(x=>x!=null);
+  if(v.length>=8){R[nm.key]={min:pctl(v,0.05),max:pctl(v,0.95)};}else if(v.length){R[nm.key]={min:Math.min(...v),max:Math.max(...v)};}});return R;}
+let activeCity=null, NR={}, activeNeigh=null;
+function nNorm(nm,v){if(v==null||!NR[nm.key])return null;const r=NR[nm.key];let n=r.max===r.min?0.5:(v-r.min)/(r.max-r.min);n=Math.max(0,Math.min(1,n));return nm.dir<0?1-n:n;}
+function nScore(f){
+  if(state.mode==='solo'){const nm=NMETS.find(x=>x.key===state.solo);if(!nm)return null;const n=nNorm(nm,f.properties[nm.prop]);return n==null?null:Math.round(n*100);}
+  let sw=0,acc=0;NMETS.forEach(nm=>{if(!state.non[nm.key])return;const w=state.nw[nm.key];if(w<=0)return;const n=nNorm(nm,f.properties[nm.prop]);if(n==null)return;sw+=w;acc+=w*n;});
+  return sw<=0?null:Math.round(acc/sw*100);}
+function styleNeigh(f){const s=nScore(f);const base=s==null?.12:.82;const fo=transitOn?base*0.4:base;
+  return {fillColor:color(s)||'#1b2735',fillOpacity:fo,
+  weight:f.properties.name===activeNeigh?2.6:(transitOn?.35:.6),color:f.properties.name===activeNeigh?'#fff':'#0c121d',className:'neighpoly'};}
+function neighRank(){if(!activeCity)return [];return activeCity.data.features.map(f=>({n:f.properties.name,s:nScore(f),f})).filter(x=>x.s!=null).sort((a,b)=>b.s-a.s);}
+// --- city-specific low-income / income definitions (surfaced as ⓘ footnotes) ---
+function povNote(){return 'Low income (LIM-AT): share of the population below Statistics Canada’s after-tax low-income line — 2021 census, consistent across all six cities.';}
+function povLbl(){return 'Low income (LIM-AT)';}
+function incNote(){return curKey()==='calgary'?'Calgary income is reported at the ward level (14 wards mapped onto communities), so neighbouring communities can share the same figure.':'';}
+function _ii(t){return ' <span class="infoi" title="'+t.replace(/"/g,'&quot;')+'">ⓘ</span>';}
+function showNeighCard(f){
+  activeNeigh=f.properties.name; if(activeCity&&activeCity.layer) activeCity.layer.setStyle(styleNeigh);
+  const p=f.properties,s=nScore(f),ring=color(s)||'#56687d',rk=neighRank(),pos=rk.findIndex(x=>x.n===p.name)+1;
+  const rows=NMETS.map(nm=>{const v=p[nm.prop],n=nNorm(nm,v),active=state.on[nm.key];let disp='\u2014';
+    if(v!=null){if(nm.key==='income')disp='$'+v.toLocaleString();else if(nm.key==='poverty')disp=v+'%';else disp=v.toLocaleString();}
+    const bar=n==null?'':`<div class="mlb"><span style="width:${Math.round(n*100)}%;background:${color(n*100)}"></span></div>`;
+    const lbl=nm.key==='poverty'?povLbl():nm.lbl;
+    const info=nm.key==='poverty'?_ii(povNote()):(nm.key==='income'&&incNote())?_ii(incNote()):'';
+    return `<div class="ml ${v==null?'na':''}" style="opacity:${active?1:.45}"><span class="mln">${lbl} <small style="color:var(--muted2)">${nm.dir>0?'\u2191':'\u2193'}</small>${info}</span>${bar}<span class="mlv">${disp}</span></div>`;}).join('');
+  document.getElementById('card').innerHTML=`
+    <span class="cardx" onclick="hideCard()">\u00d7</span>
+    <div class="cardh"><span class="nm">${p.name}</span><span class="pv">${activeCity.label}</span></div>
+    <div class="cardsub">${p.pop?p.pop.toLocaleString()+' residents':''} \u00b7 ranked ${pos} of ${rk.length}</div>
+    ${(function(){var tx=nearestStation(f);return tx?'<div class="cardsub" style="color:var(--accent2)">'+tx+'</div>':'';})()}
+    <div class="scorebig"><div class="ring" style="background:${ring}">${s==null?'\u2014':s}</div>
+      <div><div class="sl">${state.mode==='solo'?((METRICS.find(m=>m.key===state.solo)||{}).label||'\u2014'):'Neighbourhood composite'+_ii(COMPOSITE_DEF)}</div><div class="sd">higher = more attractive</div></div></div>
+    <div class="mlist">${rows}</div>
+    <div class="cardcov">Coverage · ${NMETS.map(nm=>{const tot=activeCity.data.features.length;const have=activeCity.data.features.filter(f=>f.properties[nm.prop]!=null).length;return NWLBL[nm.key]+' '+have+'/'+tot;}).join(' · ')}</div>`;
+  document.getElementById('card').classList.add('show'); buildNeighBoard();}
+function buildNeighBoard(){const rk=neighRank(),el=document.getElementById('board');
+  el.innerHTML=rk.map((x,i)=>`<div class="brow ${x.n===activeNeigh?'hot':''}" data-name="${x.n}">
+    <span class="brk">${String(i+1).padStart(2,'0')}</span><span class="swatch" style="background:${color(x.s)}"></span>
+    <span class="brn">${x.n}</span><span class="brs" style="color:${color(x.s)}">${x.s}</span></div>`).join('');
+  el.querySelectorAll('.brow').forEach(row=>row.onclick=()=>{const f=activeCity.feat[row.dataset.name],l=activeCity.layers[row.dataset.name];
+    if(f&&l){map.fitBounds(l.getBounds(),{maxZoom:14,padding:[60,60]});showNeighCard(f);}});}
+function neighLabels(){
+  document.getElementById('legTitle').textContent=state.mode==='solo'?((METRICS.find(m=>m.key===state.solo)||{}).label||''):'Neighbourhood composite';
+  document.getElementById('boardLabel').textContent=state.mode==='solo'?'Ranked':'Best';
+  document.getElementById('boardMode').textContent=state.mode==='solo'?state.solo:'composite';
+  const lg=document.querySelector('.legnote');if(lg&&activeCity)lg.innerHTML=activeCity.label+' \u00b7 '+activeCity.note+'. Toggle Transit for rail lines+stations; cards show nearest station.';}
+function buildCityLayer(city){
+  city.layers={}; city.feat={};
+  city.layer=L.geoJSON(city.data,{renderer:glRenderer,style:styleNeigh,onEachFeature:(f,l)=>{
+    city.layers[f.properties.name]=l; city.feat[f.properties.name]=f;
+    l.bindTooltip(f.properties.name,{sticky:true,direction:'top',className:'ntip',opacity:1});
+    l.on('click',()=>showNeighCard(f));
+    l.on('mouseover',()=>{if(f.properties.name!==activeNeigh)l.setStyle({weight:2,color:'#cfe'});});
+    l.on('mouseout',()=>city.layer.setStyle(styleNeigh));
+  }});}
+function setGeo(g){ setTimeout(function(){try{updateGuide()}catch(e){}},0);
+  state.geo=g; revealKey=null;
+  document.querySelectorAll('.geoswitch button').forEach(b=>b.classList.toggle('on',b.dataset.geo===g));
+  if(g!=='canada'){
+    map.removeLayer(provLayer); map.removeLayer(cmaLayer);
+    if(activeCity&&activeCity!==CITIES[g]&&activeCity.layer) map.removeLayer(activeCity.layer);
+    activeCity=CITIES[g]; activeNeigh=null;
+    if(!activeCity.layer) buildCityLayer(activeCity);
+    NR=cityRanges(activeCity);
+    activeCity.layer.addTo(map).setStyle(styleNeigh);
+    municipalLayer.addTo(map); activeCity.layer.bringToFront(); muniRestyle();
+    buildTransit(g);{const tb=document.getElementById('transitToggle');if(tb)tb.style.display='';}
+    if(transitOn){transitLayer.addTo(map);buildTransitKey(g);const tk=document.getElementById('transitKey');if(tk)tk.style.display='';}
+    map.fitBounds(activeCity.layer.getBounds(),{padding:[24,24]}); syncMuni();
+    document.querySelector('.brand h1').innerHTML=activeCity.label+' &mdash; Neighbourhood Heat Map';
+    neighLabels(); rebuildSoloSelN(); syncNeighScoreUI(); hideCard(); buildNeighBoard(); syncShare();
+  } else {
+    if(activeCity&&activeCity.layer) map.removeLayer(activeCity.layer);
+    if(map.hasLayer(municipalLayer)) map.removeLayer(municipalLayer);
+    gtaLegend(false);
+    activeCity=null;
+    map.removeLayer(transitLayer);{const tb=document.getElementById('transitToggle');if(tb)tb.style.display='none';}{const tk=document.getElementById('transitKey');if(tk)tk.style.display='none';}
+    provLayer.addTo(map); cmaLayer.addTo(map);
+    map.fitBounds([[42,-141],[70,-52]],{padding:[10,10]});
+    document.querySelector('.brand h1').innerHTML='Canadian Metro Markets &mdash; CMA Heat Map';
+    document.getElementById('legTitle').textContent=state.mode==='solo'?METRICS.find(m=>m.key===state.solo).label:'Composite opportunity';
+    document.getElementById('boardLabel').textContent='Ranked markets';
+    document.getElementById('boardMode').textContent=state.mode==='solo'?state.solo:'composite';
+    const lg=document.querySelector('.legnote');if(lg)lg.innerHTML='<i></i>hollow = no data &middot; size = population &middot; <b>zoom in</b> for municipalities &amp; neighbourhoods';
+    hideCard(); buildBoard(); syncNeighScoreUI(); syncShare();
+  }}
+document.querySelectorAll('.geoswitch button').forEach(b=>b.onclick=()=>setGeo(b.dataset.geo));
+{const tb=document.getElementById('transitToggle');if(tb)tb.onclick=()=>setTransit(!transitOn);}
+
+// ===== municipal (CMA subdivision) context layer + zoom reveal =====
+const GTA_REGION={'Toronto':'Toronto','Mississauga':'Peel','Brampton':'Peel','Caledon':'Peel','Vaughan':'York','Markham':'York','Richmond Hill':'York','Aurora':'York','Newmarket':'York','King':'York','East Gwillimbury':'York','Georgina':'York','Whitchurch-Stouffville':'York','Chippewas of Georgina Island First Nation':'York','Pickering':'Durham','Ajax':'Durham','Whitby':'Durham','Oshawa':'Durham','Clarington':'Durham','Uxbridge':'Durham','Scugog':'Durham','Brock':'Durham','Oakville':'Halton','Burlington':'Halton','Milton':'Halton','Halton Hills':'Halton'};
+const REGION_COLOR={Toronto:'#ff2bd6',Peel:'#00ecd6',York:'#c4ff3a',Durham:'#0a8bff',Halton:'#ffae3b'};
+
+const GTADEMO=GTADEMO_DATA.data, DEMO_VARS=GTADEMO_DATA.vars;
+const DEMO_COLORS=['#7a0015','#e01f2e','#ffc31c','#7fe024','#1dff5c'];
+let demoOn=false, demoVar=DEMO_VARS[0].key;
+function demoVarDef(){return DEMO_VARS.find(v=>v.key===demoVar)||DEMO_VARS[0];}
+function demoClassOf(val,br){if(val==null||val!==val)return -1;for(let i=0;i<br.length;i++){if(val<br[i])return i;}return 4;}
+function demoColorFor(name){const d=GTADEMO[name];if(!d)return null;const v=demoVarDef();const c=demoClassOf(d[v.key],v.breaks);return c<0?null:DEMO_COLORS[c];}
+function fmtDemo(val,fmt){if(val==null||val!==val)return 'n/a';if(fmt==='pct')return (val*100).toFixed(1)+'%';if(fmt==='money')return '$'+Math.round(val).toLocaleString('en-CA');if(fmt==='int')return Math.round(val).toLocaleString('en-CA');return (Math.round(val*10)/10).toLocaleString('en-CA');}
+function fmtShort(val,fmt){if(val==null)return '';if(fmt==='pct')return Math.round(val*100)+'%';if(fmt==='money'||fmt==='int'){const p=fmt==='money'?'$':'';if(val>=1e6)return p+(val/1e6).toFixed(1)+'M';if(val>=1e3)return p+Math.round(val/1e3)+'k';return p+Math.round(val);}return ''+(Math.round(val*10)/10);}
+function muniRegion(f){return (f.properties.cma==='Toronto'||f.properties.cma==='Oshawa')?(GTA_REGION[f.properties.name]||null):null;}
+function muniStyle(f){if(demoOn){const c=demoColorFor(f.properties.name);if(c)return {color:c,weight:1,opacity:.9,fillColor:c,fillOpacity:.62,className:'muni'};}
+  // When census tracts or curated neighbourhoods are drawn on top, drop the municipal FILL
+  // and keep only region-coloured outlines — otherwise two fills stack and look "doubled".
+  const faint=(typeof densOn!=='undefined'&&densOn)||(typeof activeCity!=='undefined'&&!!activeCity);
+  const r=muniRegion(f);if(r){const c=REGION_COLOR[r];return {color:c,weight:faint?1.1:1.1,opacity:faint?.85:1,fillColor:c,fillOpacity:faint?0:.2,className:'muni'};}
+  return {color:'#3d6e7d',weight:1,opacity:faint?.6:1,fillColor:'#15303b',fillOpacity:faint?0:.16,className:'muni'};}
+function muniHL(f){if(demoOn){const c=demoColorFor(f.properties.name);if(c)return {weight:2.4,color:'#ffffff',fillOpacity:.82};}const r=muniRegion(f);const c=r?REGION_COLOR[r]:'#79e6dd';return {weight:2.2,color:c,fillOpacity:r?.34:.26};}
+function muniTip(f){const nm=f.properties.name,r=muniRegion(f),d=GTADEMO[nm];let s=nm+(r?'  \u00b7  '+r+' Region':'')+'  \u00b7  '+f.properties.cma+' CMA';if(d){if(demoOn){const v=demoVarDef();s='<b>'+nm+'</b> \u00b7 '+f.properties.cma+' CMA<br>'+v.label+': <b>'+fmtDemo(d[v.key],v.fmt)+'</b><br><span style=\"opacity:.82\">HH inc '+fmtDemo(d.hh_med_inc,'money')+' \u00b7 own '+fmtDemo(d.owner_pct,'pct')+' \u00b7 imm '+fmtDemo(d.imm_pct,'pct')+' \u00b7 pop '+fmtDemo(d.pop21,'int')+'</span>';}else{s+='<br><span style=\"opacity:.82\">HH inc '+fmtDemo(d.hh_med_inc,'money')+' \u00b7 own '+fmtDemo(d.owner_pct,'pct')+' \u00b7 pop '+fmtDemo(d.pop21,'int')+'</span>';}}return s;}
+const MUNI_BY_CMA={};CMACSD.features.forEach(f=>{const k=f.properties.cma;(MUNI_BY_CMA[k]=MUNI_BY_CMA[k]||[]).push(f);});
+function _eachLngLat(g,cb){const t=g.type,c=g.coordinates;if(t==='Polygon')c.forEach(r=>r.forEach(p=>cb(p[0],p[1])));else if(t==='MultiPolygon')c.forEach(pl=>pl.forEach(r=>r.forEach(p=>cb(p[0],p[1]))));}
+const MUNI_BOUNDS={};for(const k in MUNI_BY_CMA){let a=90,b=180,c=-90,d=-180;MUNI_BY_CMA[k].forEach(f=>_eachLngLat(f.geometry,(lng,lat)=>{if(lat<a)a=lat;if(lng<b)b=lng;if(lat>c)c=lat;if(lng>d)d=lng;}));MUNI_BOUNDS[k]=L.latLngBounds([a,b],[c,d]);}
+const _muniCache={};
+function muniSub(k){if(_muniCache[k])return _muniCache[k];const lyr=L.geoJSON({type:'FeatureCollection',features:MUNI_BY_CMA[k]},{renderer:glRenderer,style:muniStyle,onEachFeature:(f,l)=>{l.bindTooltip(()=>muniTip(f),{sticky:true,direction:'top',className:'ntip',opacity:1});l.on('mouseover',()=>l.setStyle(muniHL(f)));l.on('mouseout',()=>l.setStyle(muniStyle(f)));}});_muniCache[k]=lyr;return lyr;}
+const municipalLayer=L.featureGroup();
+let _gtaKey=null;
+function gtaLegend(show){if(!_gtaKey){_gtaKey=document.createElement('div');_gtaKey.id='gtaKey';_gtaKey.className='tkey';_gtaKey.addEventListener('click',function(ev){if(ev.target.closest('.lt'))_gtaKey.classList.toggle('collapsed');});_gtaKey.style.cssText='position:absolute;left:12px;top:92px;bottom:auto;z-index:500;display:none';_gtaKey.innerHTML='<div class="lt" style="margin-bottom:6px">Greater Toronto Area &mdash; regions<span class="legchev">\u25be</span></div>'+Object.keys(REGION_COLOR).map(r=>'<div class="gtarow" style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);padding:1px 0"><span style="width:11px;height:11px;border-radius:2px;background:'+REGION_COLOR[r]+';display:inline-block"></span>'+r+'</div>').join('');const mw=document.querySelector('.mapwrap');if(mw)mw.appendChild(_gtaKey);}_gtaKey.style.display=show?'':'none';}
+function syncMuni(){if(!map.hasLayer(municipalLayer)){gtaLegend(false);return;}const vb=map.getBounds();for(const k in MUNI_BOUNDS){const inv=vb.intersects(MUNI_BOUNDS[k]);const has=_muniCache[k]&&municipalLayer.hasLayer(_muniCache[k]);if(inv&&!has)municipalLayer.addLayer(muniSub(k));else if(!inv&&has)municipalLayer.removeLayer(_muniCache[k]);}municipalLayer.bringToBack();provLayer.bringToBack();gtaLegend(!demoOn&&MUNI_BOUNDS['Toronto']&&vb.intersects(MUNI_BOUNDS['Toronto']));}
+function muniRestyle(){for(const k in _muniCache){if(municipalLayer.hasLayer(_muniCache[k]))_muniCache[k].setStyle(muniStyle);}}
+const CITYCENTERS={toronto:[43.70,-79.40],calgary:[51.05,-114.07],vancouver:[49.25,-123.10],edmonton:[53.54,-113.49],ottawa:[45.42,-75.70],montreal:[45.55,-73.62]};
+let revealKey=null;
+function curKey(){return state.geo!=='canada'?state.geo:revealKey;}
+function cityInView(){const b=map.getBounds(),ctr=map.getCenter();let best=null,bd=1e9;
+  for(const k in CITYCENTERS){const c=CITYCENTERS[k];if(b.contains(c)){const d=Math.hypot(c[0]-ctr.lat,c[1]-ctr.lng);if(d<bd){bd=d;best=k;}}}return best;}
+function revealCity(k){ if(revealKey===k)return; unrevealCity();
+  revealKey=k; activeCity=CITIES[k]; activeNeigh=null;
+  if(!activeCity.layer) buildCityLayer(activeCity);
+  NR=cityRanges(activeCity); activeCity.layer.addTo(map).setStyle(styleNeigh); activeCity.layer.bringToFront(); muniRestyle();
+  buildTransit(k); const tb=document.getElementById('transitToggle'); if(tb)tb.style.display='';
+  if(transitOn){transitLayer.addTo(map);buildTransitKey(k);const tk=document.getElementById('transitKey');if(tk)tk.style.display='';}
+  document.querySelector('.brand h1').innerHTML=activeCity.label+' &mdash; Neighbourhoods';
+  neighLabels(); buildNeighBoard(); }
+function unrevealCity(){ if(!revealKey)return;
+  if(activeCity&&activeCity.layer)map.removeLayer(activeCity.layer);
+  map.removeLayer(transitLayer);
+  const tb=document.getElementById('transitToggle');if(tb)tb.style.display='none';
+  const tk=document.getElementById('transitKey');if(tk)tk.style.display='none';
+  revealKey=null; activeCity=null; activeNeigh=null; hideCard(); muniRestyle();
+  document.querySelector('.brand h1').innerHTML='Canadian Metro Markets &mdash; CMA Heat Map';
+  document.getElementById('legTitle').textContent=state.mode==='solo'?METRICS.find(m=>m.key===state.solo).label:'Composite opportunity';
+  document.getElementById('boardLabel').textContent='Ranked markets';
+  document.getElementById('boardMode').textContent=state.mode==='solo'?state.solo:'composite';
+  buildBoard(); }
+function updateReveal(){ if(state.geo!=='canada')return;
+  const z=map.getZoom();
+  if(z>=8){ if(!map.hasLayer(municipalLayer)){municipalLayer.addTo(map);} syncMuni();
+    if(map.hasLayer(cmaLayer))map.removeLayer(cmaLayer);
+    const k=(z>=10)?cityInView():null; if(k)revealCity(k); else unrevealCity(); }
+  else { if(map.hasLayer(municipalLayer)){map.removeLayer(municipalLayer);syncMuni();}
+    if(!map.hasLayer(cmaLayer))cmaLayer.addTo(map); unrevealCity(); } }
+map.on('zoomend',updateReveal); map.on('moveend',updateReveal);
+// ===== census-tract population density choropleth (2021 census) =====
+const DENS_BREAKS=TRACTS.breaks;                                  // [1000,2500,5000,10000]
+const DENS_COLORS=['#7a0015','#e01f2e','#ffc31c','#7fe024','#1dff5c']; // worst->best (red->green)
+function densClass(d){ if(d==null) return 0; for(let i=0;i<DENS_BREAKS.length;i++){ if(d<DENS_BREAKS[i]) return i; } return 4; }
+function densColor(d){ return DENS_COLORS[densClass(d)]; }
+function fmtN(n){ return (n==null||n!==n)?'n/a':Number(n).toLocaleString('en-CA'); }
+
+const TVARS=[{key:'density',label:'Population density',fmt:'dens',breaks:DENS_BREAKS}].concat(TRACTDEMO_DATA.vars);
+const TVAR_INFO={afford:'Rent-to-income (afford): median rent ÷ median income; higher = less affordable'};
+let tractVar='density', _tvIdx=-1;
+function tvarDef(){return TVARS.find(v=>v.key===tractVar)||TVARS[0];}
+function tractValOf(ft){ if(tractVar==='density') return ft.d; const a=TRACTDEMO_DATA.data[ft.u]; return a?a[_tvIdx]:null; }
+function tractClassOf(val,br){ if(val==null||val!==val) return -1; for(let i=0;i<br.length;i++){ if(val<br[i]) return i; } return 4; }
+function tractColorFor(ft){ const v=tvarDef(); const c=tractClassOf(tractValOf(ft),v.breaks); return c<0?null:DENS_COLORS[c]; }
+function fmtTV(val,fmt){ if(val==null||val!==val) return 'n/a'; if(fmt==='dens') return fmtN(Math.round(val))+' /km\u00b2'; if(fmt==='pct') return (val*100).toFixed(1)+'%'; if(fmt==='money') return '$'+Math.round(val).toLocaleString('en-CA'); if(fmt==='int') return Math.round(val).toLocaleString('en-CA'); return (Math.round(val*10)/10).toLocaleString('en-CA'); }
+function fmtTVshort(val,fmt){ if(val==null) return ''; if(fmt==='dens'){ return val>=1000?Math.round(val/1000)+'k':''+Math.round(val); } if(fmt==='pct') return Math.round(val*100)+'%'; if(fmt==='money'||fmt==='int'){ const p=fmt==='money'?'$':''; if(val>=1e6) return p+(val/1e6).toFixed(1)+'M'; if(val>=1e3) return p+Math.round(val/1e3)+'k'; return p+Math.round(val); } return ''+(Math.round(val*10)/10); }
+
+// group tracts by CMAUID (first 3 chars of CTUID) + per-CMA bounds for viewport culling
+const TRACT_BY_CMA={};
+TRACTS.f.forEach(ft=>{ const k=ft.u.slice(0,3); (TRACT_BY_CMA[k]=TRACT_BY_CMA[k]||[]).push(ft); });
+const TRACT_BOUNDS={};
+for(const k in TRACT_BY_CMA){ let a=90,b=180,c=-90,d=-180;
+  TRACT_BY_CMA[k].forEach(ft=>_eachLngLat(ft.g,(lng,lat)=>{ if(lat<a)a=lat; if(lng<b)b=lng; if(lat>c)c=lat; if(lng>d)d=lng; }));
+  TRACT_BOUNDS[k]=L.latLngBounds([a,b],[c,d]); }
+
+function tractStyle(ft){ const c=tractColorFor(ft); const has=!!c; const col=c||'#243240'; return {renderer:glRenderer,color:col,weight:.35,opacity:has?.55:.3,fillColor:col,fillOpacity:has?.5:.14,className:'tract'}; }
+function tractHL(ft){ return {weight:1.5,opacity:1,color:'#ffffff',fillOpacity:.76}; }
+function tractTip(ft){ const k=ft.u.slice(0,3); const nm=TRACTS.names[k]||('CMA '+k); const oi=TRACTDEMO_DATA.order, a=TRACTDEMO_DATA.data[ft.u];
+  const av=key=>{ if(!a) return null; const i=oi.indexOf(key); return i<0?null:a[i]; };
+  const v=tvarDef(); const line1=(tractVar==='density')?(fmtN(ft.d)+' /km\u00b2'):(v.label+': <b>'+fmtTV(tractValOf(ft),v.fmt)+'</b>');
+  const inc=av('hh_med_inc'), own=av('owner_pct');
+  const extra='pop '+fmtN(ft.p)+(inc!=null?' \u00b7 HH inc '+fmtTV(inc,'money'):'')+(own!=null?' \u00b7 own '+fmtTV(own,'pct'):'');
+  return '<b>'+nm+'</b> \u00b7 CT '+ft.u.slice(3)+'<br>'+line1+'<br><span style="opacity:.82">'+extra+'</span>'; }
+
+const tractLayer=L.featureGroup();
+let densOn=false; const _tractCache={};
+function tractSub(k){ if(_tractCache[k]) return _tractCache[k];
+  const fc={type:'FeatureCollection',features:TRACT_BY_CMA[k].map(ft=>({type:'Feature',properties:{_t:ft},geometry:ft.g}))};
+  const lyr=L.geoJSON(fc,{renderer:glRenderer,
+    style:f=>tractStyle(f.properties._t),
+    onEachFeature:(f,l)=>{ const ft=f.properties._t;
+      l.bindTooltip(()=>tractTip(ft),{sticky:true,direction:'top',className:'ntip',opacity:1});
+      l.on('mouseover',()=>l.setStyle(tractHL(ft)));
+      l.on('mouseout',()=>l.setStyle(tractStyle(ft))); }});
+  _tractCache[k]=lyr; return lyr; }
+
+// Map the five curated cities to their CMA codes. While a city's curated neighbourhood layer
+// is showing, we suppress that CMA's tracts entirely so nothing ever covers the neighbourhoods.
+const CITY_CMA={toronto:'535',calgary:'825',vancouver:'933',edmonton:'835',ottawa:'505',montreal:'462'};
+function activeCuratedCMA(){
+  if(state.geo!=='canada'&&CITY_CMA[state.geo]) return CITY_CMA[state.geo];
+  if(revealKey&&CITY_CMA[revealKey]) return CITY_CMA[revealKey];
+  return null; }
+
+function syncTracts(){ if(!map.hasLayer(tractLayer)) return;
+  if(map.getZoom()<8){ for(const k in _tractCache){ if(tractLayer.hasLayer(_tractCache[k])) tractLayer.removeLayer(_tractCache[k]); } densHint(true); return; }
+  densHint(false); const vb=map.getBounds(); const skip=activeCuratedCMA();
+  for(const k in TRACT_BOUNDS){ const inv=vb.intersects(TRACT_BOUNDS[k])&&k!==skip; const has=_tractCache[k]&&tractLayer.hasLayer(_tractCache[k]);
+    if(inv&&!has) tractLayer.addLayer(tractSub(k)); else if(!inv&&has) tractLayer.removeLayer(_tractCache[k]); }
+  tractLayer.bringToFront();
+  if(typeof activeCity!=='undefined'&&activeCity&&activeCity.layer&&map.hasLayer(activeCity.layer))activeCity.layer.bringToFront(); }   // tracts above the faint municipal layer, curated neighbourhoods kept on top of the tracts
+
+function buildDensLegend(){ let el=document.getElementById('densLegend');
+  if(!el){ el=document.createElement('div'); el.id='densLegend'; el.className='denslegend'; el.style.display='none'; el.addEventListener('click',function(ev){if(ev.target.closest('.lt'))el.classList.toggle('collapsed');});
+    const mw=document.querySelector('.mapwrap'); if(mw) mw.appendChild(el); }
+  const v=tvarDef(); const br=v.breaks; const labs=['&lt; '+fmtTVshort(br[0],v.fmt)];
+  for(let i=0;i<br.length-1;i++) labs.push(fmtTVshort(br[i],v.fmt)+'\u2013'+fmtTVshort(br[i+1],v.fmt));
+  labs.push('&ge; '+fmtTVshort(br[br.length-1],v.fmt));
+  el.innerHTML='<div class="lt">'+v.label+(TVAR_INFO[v.key]?_ii(TVAR_INFO[v.key]):'')+' \u00b7 2021 census tracts<span class="legchev">\u25be</span></div>'
+    +'<div class="densramp">'+DENS_COLORS.map(c=>'<span style="background:'+c+'"></span>').join('')+'</div>'
+    +'<div class="denssc">'+labs.map(l=>'<span>'+l+'</span>').join('')+'</div>'
+    +'<div class="denshint" id="densHint">Zoom into a metro to reveal tracts.</div>'
+    +'<div class="densnote">'+(v.fmt==='dens'?'people / km\u00b2 \u00b7 ':'')+'41 CMAs \u00b7 6,052 tracts</div>'; }
+function densHint(show){ const h=document.getElementById('densHint'); if(h) h.style.display=show?'':'none'; }
+
+function setDens(on){ densOn=on; setTimeout(function(){try{updateGuide()}catch(e){}},0); const btn=document.getElementById('densToggle'); if(btn) btn.classList.toggle('on',on);
+  const lg=document.getElementById('densLegend'); if(lg) lg.style.display=on?'':'none';
+  const tsel=document.getElementById('tractSel'); if(tsel) tsel.style.display=on?'':'none';
+  if(on){ if(!map.hasLayer(tractLayer)) tractLayer.addTo(map); syncTracts(); }
+  else { for(const k in _tractCache){ if(tractLayer.hasLayer(_tractCache[k])) tractLayer.removeLayer(_tractCache[k]); } if(map.hasLayer(tractLayer)) map.removeLayer(tractLayer); } }
+
+buildDensLegend();
+{const db=document.getElementById('densToggle'); if(db) db.onclick=()=>setDens(!densOn);}
+function tractRestyle(){ for(const k in _tractCache){ if(tractLayer.hasLayer(_tractCache[k])) _tractCache[k].setStyle(f=>tractStyle(f.properties._t)); } }
+function setTractVar(k){ tractVar=k; _tvIdx=TRACTDEMO_DATA.order.indexOf(k); buildDensLegend(); tractRestyle(); try{updateGuide()}catch(e){} }
+{const ts=document.getElementById('tractSel'); if(ts){ ts.innerHTML=TVARS.map(v=>'<option value="'+v.key+'">'+v.label+'</option>').join(''); ts.value=tractVar; ts.onchange=()=>setTractVar(ts.value); }}
+map.on('moveend',()=>{ if(densOn) syncTracts(); });
+map.on('zoomend',()=>{ if(densOn) syncTracts(); });
+
+// ===== Address lookup: geocode (OSM Nominatim) -> point-in-polygon tract -> profile =====
+let _addrMarker=null;
+function _ptInRing(x,y,r){let ins=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const xi=r[i][0],yi=r[i][1],xj=r[j][0],yj=r[j][1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))ins=!ins;}return ins;}
+function _ptInGeom(x,y,g){const t=g.type,c=g.coordinates;
+  if(t==='Polygon'){if(!_ptInRing(x,y,c[0]))return false;for(let i=1;i<c.length;i++)if(_ptInRing(x,y,c[i]))return false;return true;}
+  if(t==='MultiPolygon'){for(const pl of c){if(_ptInRing(x,y,pl[0])){let hole=false;for(let i=1;i<pl.length;i++)if(_ptInRing(x,y,pl[i])){hole=true;break;}if(!hole)return true;}}return false;}
+  return false;}
+function _findTract(lat,lng){ for(const k in TRACT_BOUNDS){ if(!TRACT_BOUNDS[k].contains([lat,lng])) continue;
+    for(const ft of TRACT_BY_CMA[k]){ if(_ptInGeom(lng,lat,ft.g)) return ft; } } return null; }
+function _curatedNeigh(cma,lat,lng){ for(const key in CITY_CMA){ if(CITY_CMA[key]!==cma) continue; const city=CITIES[key]; if(!city||!city.data) return null;
+    for(const f of city.data.features){ if(_ptInGeom(lng,lat,f.geometry)) return {city:city.label,name:f.properties.name}; } } return null; }
+function _nearestTransit(lat,lng){ let best=1e9,bn='';
+  for(const key in TRANSIT){ const t=TRANSIT[key]; if(!t||!t.stations) continue;
+    for(const s of t.stations){ const d=_hav(lat,lng,s[1],s[0]); if(d<best){ best=d; bn=s[2]; } } }
+  if(bn===''||best>25) return null; return {km:best,name:bn}; }
+function _ar(label,val){ return '<tr><td>'+label+'</td><td>'+val+'</td></tr>'; }
+function _addrProfileHTML(ft,label,neigh,lat,lng){ const k=ft.u.slice(0,3), cma=TRACTS.names[k]||('CMA '+k);
+  const a=TRACTDEMO_DATA.data[ft.u], order=TRACTDEMO_DATA.order;
+  const g=key=>{ const i=order.indexOf(key); return (a&&i>=0)?a[i]:null; };
+  const tr=_nearestTransit(lat,lng);
+  const tline=tr?'<div class="aptransit">🚇 '+tr.km.toFixed(tr.km<1?2:1)+' km to '+tr.name+'</div>':'';
+  let rows=_ar('Population (2021)',fmtN(ft.p))+_ar('Population density',ft.d!=null?fmtN(Math.round(ft.d))+' /km²':'n/a');
+  TRACTDEMO_DATA.vars.forEach(function(v){ if(v.key==='pop21') return; rows+=_ar(v.label+(TVAR_INFO[v.key]?_ii(TVAR_INFO[v.key]):''),fmtTV(g(v.key),v.fmt)); });   // every available census metric, using each variable's own label + format
+  return '<div class="addrpop"><div class="aph">'+label+'</div>'
+    +'<div class="apsub">'+cma+' · CT '+ft.u.slice(3)+(neigh?' · '+neigh.name:'')+'</div>'
+    +tline+'<div class="aptblwrap"><table class="aptbl">'+rows+'</table></div></div>'; }
+function _setAddrStatus(t){ const s=document.getElementById('addrStatus'); if(s){ s.textContent=t||''; s.style.display=t?'':'none'; } }
+function _placeAddr(lat,lng,disp){
+  if(_addrMarker) map.removeLayer(_addrMarker);
+  _addrMarker=L.circleMarker([lat,lng],{radius:8,color:'#fff',weight:2,fillColor:'#ff2bd6',fillOpacity:.92,className:'addrpin'}).addTo(map);
+  const ft=_findTract(lat,lng); const neigh=ft?_curatedNeigh(ft.u.slice(0,3),lat,lng):null; let html;
+  if(ft){ html=_addrProfileHTML(ft,disp,neigh,lat,lng); map.setView([lat,lng],Math.max(map.getZoom(),13)); }
+  else { html='<div class="addrpop"><div class="aph">'+disp+'</div><div class="apsub" style="opacity:.85">No census-tract data here — outside the 41 metro areas covered.</div></div>'; map.setView([lat,lng],Math.max(map.getZoom(),11)); }
+  _addrMarker.bindPopup(html,{maxWidth:300,minWidth:212,className:'addrpopwrap'}).openPopup(); }
+// ----- live address autocomplete (Nominatim) -----
+let _addrSugg=[], _addrSel=-1, _suggT=null, _lastQ='';
+function _shortName(dn){ return (dn||'').split(',').slice(0,4).join(','); }
+function _hideSugg(){ const d=document.getElementById('addrSugg'); if(d){ d.style.display='none'; d.innerHTML=''; } _addrSugg=[]; _addrSel=-1; }
+function _renderSugg(){ const d=document.getElementById('addrSugg'); if(!d) return;
+  if(!_addrSugg.length){ _hideSugg(); return; }
+  d.innerHTML=_addrSugg.map((s,i)=>'<div class="asg'+(i===_addrSel?' sel':'')+'" data-i="'+i+'">'+_shortName(s.display_name)+'</div>').join('');
+  d.style.display='';
+  d.querySelectorAll('.asg').forEach(el=>el.onclick=()=>{ _pick(_addrSugg[+el.dataset.i]); }); }
+function _pick(s){ if(!s) return; const inp=document.getElementById('addrSearch'); if(inp) inp.value=_shortName(s.display_name); _hideSugg(); _setAddrStatus(''); _placeAddr(+s.lat,+s.lon,_shortName(s.display_name)); }
+// Canadian postal-code / FSA aware geocoding (Nominatim's CA postal coverage is partial)
+function _isFSA(q){return /^[A-Za-z]\d[A-Za-z]$/.test(q);}
+function _isPostal(q){return /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/.test(q);}
+function _geoURL(q,limit){var b='https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit='+limit+'&countrycodes=ca';
+  return (_isPostal(q)||_isFSA(q))?b+'&postalcode='+encodeURIComponent(q.toUpperCase()):b+'&q='+encodeURIComponent(q);}
+async function _fetchSugg(q){ try{
+    const url=_geoURL(q,6);
+    const r=await fetch(url,{headers:{'Accept':'application/json'}}); const j=await r.json();
+    if(q!==_lastQ) return;                        // a newer keystroke superseded this
+    _addrSugg=Array.isArray(j)?j:[]; _addrSel=-1; _setAddrStatus('');
+    const d=document.getElementById('addrSugg');
+    if(!_addrSugg.length){ if(d){ d.style.display=''; d.innerHTML='<div class="asgmsg">No matches found</div>'; } return; }
+    _renderSugg();
+  }catch(e){ _setAddrStatus('Lookup failed'); } }
+function _onAddrInput(){ const inp=document.getElementById('addrSearch'); const q=(inp?inp.value:'').trim(); _lastQ=q;
+  if(_suggT) clearTimeout(_suggT);
+  if(q.length<4 && !_isFSA(q)){ _hideSugg(); _setAddrStatus(''); return; }
+  _setAddrStatus('Searching…'); _suggT=setTimeout(()=>_fetchSugg(q),450); }
+async function doAddrLookup(q){ q=(q||'').trim(); if(!q) return;
+  if(_addrSel>=0 && _addrSugg[_addrSel]){ _pick(_addrSugg[_addrSel]); return; }
+  if(_addrSugg.length){ _pick(_addrSugg[0]); return; }
+  _setAddrStatus('Searching…');
+  try{ const url=_geoURL(q,1);
+    const r=await fetch(url,{headers:{'Accept':'application/json'}}); const j=await r.json();
+    if(!j||!j.length){ _setAddrStatus((_isPostal(q)||_isFSA(q))?'Postal code not found — partial coverage':'Address not found'); return; }
+    _hideSugg(); _setAddrStatus(''); _placeAddr(+j[0].lat,+j[0].lon,_shortName(j[0].display_name||q));
+  }catch(e){ _setAddrStatus('Lookup failed — retry'); } }
+{ if(map.zoomControl) map.zoomControl.setPosition('bottomright');
+  const ai=document.getElementById('addrSearch');
+  if(ai){ ai.addEventListener('input',_onAddrInput);
+    ai.addEventListener('keydown',e=>{ const d=document.getElementById('addrSugg'); const open=d&&d.style.display!=='none'&&_addrSugg.length;
+      if(e.key==='ArrowDown'&&open){ e.preventDefault(); _addrSel=Math.min(_addrSel+1,_addrSugg.length-1); _renderSugg(); }
+      else if(e.key==='ArrowUp'&&open){ e.preventDefault(); _addrSel=Math.max(_addrSel-1,0); _renderSugg(); }
+      else if(e.key==='Enter'){ e.preventDefault(); doAddrLookup(ai.value); }
+      else if(e.key==='Escape'){ _hideSugg(); } }); }
+  const ab=document.getElementById('addrGo'); if(ab) ab.onclick=()=>{ const x=document.getElementById('addrSearch'); doAddrLookup(x?x.value:''); };
+  document.addEventListener('click',e=>{ if(!e.target.closest('.addrwrap')) _hideSugg(); }); }
+function buildDemoLegend(){let el=document.getElementById('demoLegend');if(!el){el=document.createElement('div');el.id='demoLegend';el.className='denslegend demolegend';el.style.display='none';el.addEventListener('click',function(ev){if(ev.target.closest('.lt'))el.classList.toggle('collapsed');});const mw=document.querySelector('.mapwrap');if(mw)mw.appendChild(el);}const v=demoVarDef();const br=v.breaks;const labs=['< '+fmtShort(br[0],v.fmt)];for(let i=0;i<br.length-1;i++)labs.push(fmtShort(br[i],v.fmt)+'\u2013'+fmtShort(br[i+1],v.fmt));labs.push('\u2265 '+fmtShort(br[br.length-1],v.fmt));el.innerHTML='<div class="lt">'+v.label+' \u00b7 GTA municipalities<span class="legchev">\u25be</span></div><div class="densramp">'+DEMO_COLORS.map(c=>'<span style="background:'+c+'"></span>').join('')+'</div><div class="denssc">'+labs.map(l=>'<span>'+l+'</span>').join('')+'</div><div class="denshint" id="demoHint">Zoom into the GTA to see municipalities.</div><div class="densnote">2021 census \u00b7 55 municipalities</div>';}
+function demoHintCheck(){const x=document.getElementById('demoHint');if(x)x.style.display=(demoOn&&map.getZoom()<8)?'':'none';}
+function demoRestyle(){for(const k in _muniCache){if(municipalLayer.hasLayer(_muniCache[k]))_muniCache[k].setStyle(muniStyle);}}
+function setDemoVar(k){demoVar=k;buildDemoLegend();demoHintCheck();demoRestyle();try{updateGuide()}catch(e){}}
+function setDemo(on){demoOn=on;const b=document.getElementById('demoToggle');if(b)b.classList.toggle('on',on);const s=document.getElementById('demoSel');if(s)s.style.display=on?'':'none';const lg=document.getElementById('demoLegend');if(lg)lg.style.display=on?'':'none';if(on)gtaLegend(false);buildDemoLegend();demoHintCheck();demoRestyle();try{updateGuide()}catch(e){}}
+buildDemoLegend();
+{const db=document.getElementById('demoToggle');if(db)db.onclick=()=>setDemo(!demoOn);}
+{const ds=document.getElementById('demoSel');if(ds){ds.innerHTML=DEMO_VARS.map(v=>'<option value="'+v.key+'">'+v.label+'</option>').join('');ds.value=demoVar;ds.onchange=()=>setDemoVar(ds.value);}}
+map.on('zoomend',demoHintCheck);
+
+buildMetrics();coverage();paint();updateMix();buildNWeights();rebuildSoloSelN();
+
+// ===== guided UX engine =====
+function colorHint(){ return 'brighter green = better, deeper red = worse'; }
+function _soloLabel(){ try{ return (METRICS.find(function(x){return x.key===state.solo;})||{}).label; }catch(e){ return null; } }
+function setCityFlag(){ var a=document.getElementById('app'); if(a) a.setAttribute('data-city',(typeof activeCity!=='undefined'&&activeCity)?'1':'0'); }
+function updateGuide(){
+  setCityFlag();
+  var el=document.getElementById('guideNow'); if(!el) return;
+  var app=document.getElementById('app'); var tab=app?app.getAttribute('data-tab'):'metro';
+  var z=(typeof map!=='undefined'&&map.getZoom)?map.getZoom():0;
+  if(app) app.setAttribute('data-zoom', z>=8?'deep':'shallow');
+  var scoreLbl=(state.mode==='solo'?(_soloLabel()||'overall market score'):'overall market score');
+  var s='';
+  if(typeof demoOn!=='undefined'&&demoOn){ var v=demoVarDef(); s='<b>'+v.label+'</b> for every municipality in the Greater Toronto Area. '+colorHint()+'.'; if(z<8) s+=' &mdash; <b>zoom into the GTA</b> to see them.'; }
+  else if(typeof activeCity!=='undefined'&&activeCity){ var m=(state.mode==='solo'?(_soloLabel()||'overall neighbourhood score'):'overall neighbourhood score'); s='<b>'+activeCity.label+'</b> neighbourhoods, coloured by '+m+'. '+colorHint()+'. Toggle <b>Transit</b> for rail lines.'; }
+  else if(typeof densOn!=='undefined'&&densOn&&z>=8){ var t=tvarDef(); s='Neighbourhoods (census tracts) coloured by <b>'+t.label+'</b>. '+colorHint()+'. Hover any area for its numbers.'; }
+  else if(tab==='neigh'){ var t2=tvarDef(); s='<b>'+t2.label+'</b> by neighbourhood. <b>Zoom into any metro</b>, or pick a focus city, to reveal the census tracts.'; }
+  else { s='Canadian <b>metro areas</b>, coloured by '+scoreLbl+'. Each circle is a metro; bigger = more people. <b>Zoom into any metro</b> to drill into its neighbourhoods.'; }
+  el.innerHTML=s;
+}
+function _qvHighlight(v){ var qv=document.getElementById('qv'); if(!qv) return; var bs=qv.querySelectorAll('.qvbtn'); for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-view')===v); }
+function gtaFit(){ map.fitBounds(L.latLngBounds([43.0,-80.4],[44.55,-78.35]),{padding:[18,18]}); }
+function applyView(v){
+  if(v==='national'){ if(densOn)setDens(false); if(demoOn)setDemo(false); if(state.geo!=='canada')setGeo('canada'); map.fitBounds([[42,-141],[70,-52]],{padding:[10,10]}); }
+  else if(v==='muni-income'){ if(state.geo!=='canada')setGeo('canada'); if(densOn)setDens(false); setDemoVar('hh_med_inc'); if(!demoOn)setDemo(true); gtaFit(); }
+  else if(v==='muni-diversity'){ if(state.geo!=='canada')setGeo('canada'); if(densOn)setDens(false); setDemoVar('vm_pct'); if(!demoOn)setDemo(true); gtaFit(); }
+  else if(v==='tract-income'){ if(state.geo!=='canada')setGeo('canada'); if(demoOn)setDemo(false); setTractVar('hh_med_inc'); if(!densOn)setDens(true); gtaFit(); }
+  else if(v==='tract-density'){ if(state.geo!=='canada')setGeo('canada'); if(demoOn)setDemo(false); setTractVar('density'); if(!densOn)setDens(true); gtaFit(); }
+  _qvHighlight(v); setTimeout(updateGuide,80);
+}
+// ===== tab orchestration (Metro Markets / Neighbourhoods / GTA Cities) =====
+function setTab(name){
+  document.querySelectorAll('#tabs .tab').forEach(function(t){t.classList.toggle('on',t.getAttribute('data-tab')===name);});
+  document.querySelectorAll('.ctrlgrp').forEach(function(g){g.style.display=(g.getAttribute('data-for')===name)?'':'none';});
+  var app=document.getElementById('app'); if(app) app.setAttribute('data-tab',name);
+  if(name==='metro'){
+    if(demoOn)setDemo(false);
+    if(state.geo!=='canada')setGeo('canada'); else if(revealKey&&typeof unrevealCity==='function')unrevealCity();
+    setTractVar('hh_med_inc');           // income stands in for the score at neighbourhood level
+    if(!densOn)setDens(true);             // tracts reveal progressively on zoom; hidden at country view
+    map.fitBounds([[42,-141],[70,-52]],{padding:[10,10]});
+  } else if(name==='neigh'){
+    if(demoOn)setDemo(false);
+    if(state.geo!=='canada')setGeo('canada');
+    if(!densOn)setDens(true);
+  } else if(name==='gta'){
+    if(densOn)setDens(false);
+    if(state.geo!=='canada')setGeo('canada');
+    setDemoVar('hh_med_inc'); if(!demoOn)setDemo(true); gtaFit();
+  }
+  var _rr=document.getElementById('railReopen'),_rl=document.getElementById('rail');
+  if(_rr)_rr.style.display=(name==='metro'&&_rl&&_rl.classList.contains('collapsed'))?'flex':'none';
+  rebuildSoloSel(); setCityFlag(); syncTrafficBtn(name); syncShare(); setTimeout(function(){try{updateGuide()}catch(e){}},60);
+}
+
+// ===== session 6: traffic AADT layer (Ontario MTO provincial highways, 2019) =====
+var trafficLayer=L.featureGroup(); var trafficOn=false; var _trafficBuilt=false;
+var TRAFFIC_BREAKS=[5000,15000,30000,60000,120000];
+var TRAFFIC_COLORS=['#ffe34d','#ffb12e','#ff7a1a','#ff3b1f','#d10f3f','#7a0033']; // amber -> crimson
+function trafficClass(v){for(var i=0;i<TRAFFIC_BREAKS.length;i++){if(v<TRAFFIC_BREAKS[i])return i;}return TRAFFIC_BREAKS.length;}
+function trafficColor(v){return TRAFFIC_COLORS[trafficClass(v)];}
+function trafficWeight(v){return 0.6+trafficClass(v)*0.7;} // thinner: ~0.6px (quiet) .. ~4.1px (busiest, >120k)
+function _kfmt(v){return v>=1000?(v/1000)+'k':''+v;}
+function _fmtN2(n){return Number(n).toLocaleString('en-CA');}
+function _hwyLbl(h){return (/^\d/.test(h||''))?('Hwy '+h):(h||'?');}      // "401"->"Hwy 401", "QEW"->"QEW"
+// build everything once (like buildTransit); Leaflet then handles pan/zoom natively — no redraw-on-move flicker
+function buildTrafficLines(){ if(_trafficBuilt)return; _trafficBuilt=true;
+  if(typeof TRAFFIC==='undefined')return;
+  (TRAFFIC.lines||[]).forEach(function(ln){ var aadt=ln[0],hwy=ln[1],cs=ln[2];   // provincial highways = lines
+    var ll=cs.map(function(c){return [c[1],c[0]];});
+    L.polyline(ll,{renderer:glRenderer,color:trafficColor(aadt),weight:trafficWeight(aadt),opacity:.95,lineCap:'round',lineJoin:'round',className:'trafficln'})
+      .bindTooltip(_hwyLbl(hwy)+' · AADT '+_fmtN2(aadt)+' (2019)',{sticky:true,direction:'top',className:'ntip',opacity:1})
+      .addTo(trafficLayer); }); }
+function buildTrafficLegend(){ var el=document.getElementById('trafficLegend');
+  if(!el){el=document.createElement('div');el.id='trafficLegend';el.className='denslegend';el.style.cssText='left:50%;top:auto;transform:translateX(-50%);bottom:16px;width:300px;display:none';el.addEventListener('click',function(ev){if(ev.target.closest('.lt'))el.classList.toggle('collapsed');});var mw=document.querySelector('.mapwrap');if(mw)mw.appendChild(el);}
+  var labs=['< '+_kfmt(TRAFFIC_BREAKS[0])];
+  for(var i=0;i<TRAFFIC_BREAKS.length-1;i++)labs.push(_kfmt(TRAFFIC_BREAKS[i])+'–'+_kfmt(TRAFFIC_BREAKS[i+1]));
+  labs.push('≥ '+_kfmt(TRAFFIC_BREAKS[TRAFFIC_BREAKS.length-1]));
+  el.innerHTML='<div class="lt">Traffic · AADT (vehicles/day)<span class="legchev">▾</span></div>'
+   +'<div class="densramp">'+TRAFFIC_COLORS.map(function(c){return '<span style="background:'+c+'"></span>';}).join('')+'</div>'
+   +'<div class="denssc">'+labs.map(function(l){return '<span>'+l+'</span>';}).join('')+'</div>'
+   +'<div class="denshint">Thicker &amp; redder = busier road · hover a road for its count</div>'
+   +'<div class="densnote">Ontario provincial highways · MTO, 2019</div>'; }
+function setTraffic(on){ trafficOn=on; var b=document.getElementById('trafficToggle'); if(b)b.classList.toggle('on',on);
+  var lg=document.getElementById('trafficLegend'); if(lg)lg.style.display=on?'':'none';
+  if(on){ buildTrafficLines(); if(!map.hasLayer(trafficLayer))trafficLayer.addTo(map); trafficLayer.bringToFront(); }
+  else { if(map.hasLayer(trafficLayer))map.removeLayer(trafficLayer); }
+  try{updateGuide()}catch(e){} }
+function syncTrafficBtn(name){ var b=document.getElementById('trafficToggle'); if(!b)return;
+  var show=(name==='metro'||name==='neigh'); b.style.display=show?'':'none';
+  if(!show&&trafficOn)setTraffic(false); }
+buildTrafficLegend();
+{var tfb=document.getElementById('trafficToggle');if(tfb)tfb.onclick=function(){setTraffic(!trafficOn);};}
+map.on('zoomend moveend',function(){ if(trafficOn) trafficLayer.bringToFront(); }); // keep highways above the neighbourhood fills (which re-front themselves on zoom) without breaking hover
+
+// ===== session 5: saved scenarios, image/PDF export, persistent note pins =====
+function _esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+// ---- saved weighting scenarios ----
+function _loadScens(){try{return JSON.parse(localStorage.getItem('si_scen')||'{}');}catch(e){return {};}}
+function _saveScens(o){try{localStorage.setItem('si_scen',JSON.stringify(o));}catch(e){}}
+function renderScens(){var el=document.getElementById('scenList');if(!el)return;var o=_loadScens();var names=Object.keys(o);
+  if(!names.length){el.innerHTML='<div class="scenempty">No saved scenarios yet — set the sliders, name the mix, and Save.</div>';return;}
+  el.innerHTML=names.map(function(n){return '<div class="scenitem"><span class="scenload" data-n="'+_esc(n)+'" title="Load this weighting">'+_esc(n)+'</span><span class="scendel" data-d="'+_esc(n)+'" title="Delete">×</span></div>';}).join('');
+  el.querySelectorAll('.scenload').forEach(function(s){s.onclick=function(){var o2=_loadScens(),p=o2[s.getAttribute('data-n')];if(p){applyPayload(p);refresh();clearPreset();}};});
+  el.querySelectorAll('.scendel').forEach(function(s){s.onclick=function(){var o2=_loadScens();delete o2[s.getAttribute('data-d')];_saveScens(o2);renderScens();};});}
+{var sname=document.getElementById('scenName'),ssave=document.getElementById('scenSave');
+ function _doSaveScen(){if(!sname)return;var n=(sname.value||'').trim();if(!n){sname.focus();return;}var o=_loadScens();o[n]=viewState();_saveScens(o);sname.value='';renderScens();}
+ if(ssave)ssave.onclick=_doSaveScen;
+ if(sname)sname.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();_doSaveScen();}});}
+
+// ---- image / PDF export (libraries lazy-loaded on first use, so they never slow initial paint) ----
+function _loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=function(){res();};s.onerror=function(){rej(new Error('failed to load '+src));};document.head.appendChild(s);});}
+var _libP=null;
+function _ensureExportLibs(){ if(_libP)return _libP;
+  _libP=Promise.all([
+    (typeof htmlToImage!=='undefined')?Promise.resolve():_loadScript('https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js'),
+    (window.jspdf&&window.jspdf.jsPDF)?Promise.resolve():_loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js')
+  ]); return _libP; }
+function _setExportBusy(b){['exportPng','exportPdf'].forEach(function(id){var el=document.getElementById(id);if(el){el.disabled=b;el.style.opacity=b?'.5':'';}});}
+function _withChromeHidden(fn){var node=document.querySelector('.mapwrap');
+  var hidden=[].slice.call(node.querySelectorAll('.helpbtn,.homebtn,.railreopen,.addrsugg,.leaflet-control-zoom'));
+  hidden.forEach(function(e){e.setAttribute('data-exh',e.style.display||'');e.style.display='none';});
+  return Promise.resolve().then(function(){return fn(node);}).finally(function(){
+    hidden.forEach(function(e){e.style.display=e.getAttribute('data-exh')||'';e.removeAttribute('data-exh');});});}
+function _exportFilename(ext){var d=new Date(),p=function(n){return (n<10?'0':'')+n;};
+  return 'site_intelligence_'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+'.'+ext;}
+function _capturePNG(){return _ensureExportLibs().then(function(){return _withChromeHidden(function(node){return htmlToImage.toPng(node,{pixelRatio:2,backgroundColor:'#05131b',cacheBust:true});});});}
+function exportPNG(){_setExportBusy(true);
+  _capturePNG().then(function(url){var a=document.createElement('a');a.href=url;a.download=_exportFilename('png');document.body.appendChild(a);a.click();a.remove();})
+   .catch(function(e){alert('Image export failed: '+(e&&e.message||e));})
+   .finally(function(){_setExportBusy(false);});}
+function exportPDF(){_setExportBusy(true);
+  _capturePNG().then(function(url){return new Promise(function(res,rej){var img=new Image();
+    img.onload=function(){try{var w=img.width/2,h=img.height/2,JS=window.jspdf.jsPDF;
+      var pdf=new JS({orientation:w>h?'l':'p',unit:'pt',format:[w,h]});pdf.addImage(url,'PNG',0,0,w,h);pdf.save(_exportFilename('pdf'));res();}catch(err){rej(err);}};
+    img.onerror=function(){rej(new Error('image decode failed'));};img.src=url;});})
+   .catch(function(e){alert('PDF export failed: '+(e&&e.message||e));})
+   .finally(function(){_setExportBusy(false);});}
+{var ep=document.getElementById('exportPng');if(ep)ep.onclick=exportPNG;
+ var ed=document.getElementById('exportPdf');if(ed)ed.onclick=exportPDF;}
+
+// ---- persistent site note pins ----
+var _pinLayer=L.layerGroup().addTo(map);
+var _pinAdd=false;
+function _loadPins(){try{return JSON.parse(localStorage.getItem('si_pins')||'[]');}catch(e){return [];}}
+function _savePins(a){try{localStorage.setItem('si_pins',JSON.stringify(a));}catch(e){}}
+function _pinPopupHTML(p){return '<div class="pinpop"><div class="pinpoplbl">'+_esc(p.label)+'</div><div class="pinpopsub">'+p.lat.toFixed(5)+', '+p.lng.toFixed(5)+'</div><button class="pindelbtn" data-pin="'+p.id+'">Delete note</button></div>';}
+function _renderPins(){_pinLayer.clearLayers();_loadPins().forEach(function(p){
+  var mk=L.circleMarker([p.lat,p.lng],{radius:7,color:'#1a0d04',weight:2,fillColor:'#ff8a3b',fillOpacity:.95,className:'notepin'});
+  mk.bindTooltip(p.label,{direction:'top',className:'ntip',opacity:1});
+  mk.bindPopup(_pinPopupHTML(p),{className:'addrpopwrap'});
+  mk.on('popupopen',function(e){var b=e.popup._contentNode&&e.popup._contentNode.querySelector('.pindelbtn');if(b)b.onclick=function(){_deletePin(p.id);};});
+  mk.addTo(_pinLayer);});
+  _updateNotesCount();}
+function _addPin(lat,lng,label){var a=_loadPins();a.push({id:'p'+Date.now()+Math.floor(Math.random()*1e4),lat:lat,lng:lng,label:label});_savePins(a);_renderPins();}
+function _deletePin(id){_savePins(_loadPins().filter(function(p){return p.id!==id;}));map.closePopup();_renderPins();renderNotesList();}
+function _setPinAdd(on){_pinAdd=on;var b=document.getElementById('addPin');if(b)b.classList.toggle('on',on);
+  var mc=document.getElementById('map');if(mc)mc.style.cursor=on?'crosshair':'';
+  _setAddrStatus(on?'Click the map to drop a note pin':'');}
+map.on('click',function(e){if(!_pinAdd)return;_setPinAdd(false);
+  var label=window.prompt('Label for this site note:','');if(label==null)return;
+  _addPin(e.latlng.lat,e.latlng.lng,(label.trim()||'Untitled note'));});
+{var ap=document.getElementById('addPin');if(ap)ap.onclick=function(){_setPinAdd(!_pinAdd);};}
+function _updateNotesCount(){var b=document.getElementById('notesBtn');if(b){var n=_loadPins().length;b.textContent='Notes'+(n?' ('+n+')':'');}}
+function renderNotesList(){var el=document.getElementById('notesList');if(!el)return;var a=_loadPins();
+  if(!a.length){el.innerHTML='<div class="scenempty">No site notes yet. Click “Note” in the top bar, then click the map to drop one.</div>';return;}
+  el.innerHTML=a.map(function(p){return '<div class="noteitem"><span class="notego" data-go="'+p.id+'">'+_esc(p.label)+'<small>'+p.lat.toFixed(4)+', '+p.lng.toFixed(4)+'</small></span><span class="notedel" data-del="'+p.id+'" title="Delete">×</span></div>';}).join('');
+  el.querySelectorAll('.notego').forEach(function(s){s.onclick=function(){var p=_loadPins().find(function(x){return x.id===s.getAttribute('data-go');});if(p){var m=document.getElementById('notes');if(m)m.classList.add('hidden');map.setView([p.lat,p.lng],Math.max(map.getZoom(),13),{animate:true});}};});
+  el.querySelectorAll('.notedel').forEach(function(s){s.onclick=function(){_deletePin(s.getAttribute('data-del'));};});}
+{var nb=document.getElementById('notesBtn');if(nb)nb.onclick=function(){renderNotesList();var m=document.getElementById('notes');if(m)m.classList.remove('hidden');};
+ var ng=document.getElementById('notesGo');if(ng)ng.onclick=function(){var m=document.getElementById('notes');if(m)m.classList.add('hidden');};
+ var nmod=document.getElementById('notes');if(nmod)nmod.addEventListener('click',function(e){if(e.target===nmod)nmod.classList.add('hidden');});}
+
+(function(){
+  var tabs=document.getElementById('tabs');
+  if(tabs){ tabs.querySelectorAll('.tab').forEach(function(b){ b.onclick=function(){ setTab(b.getAttribute('data-tab')); }; }); }
+  var inp=document.getElementById('cmaSearch'), dl=document.getElementById('cmaList');
+  if(inp&&dl){
+    dl.innerHTML=CMA.slice().sort(function(a,b){return a.name.localeCompare(b.name);}).map(function(c){return '<option value="'+c.name+'"></option>';}).join('');
+    var go=function(){ var q=inp.value.trim().toLowerCase(); if(!q)return;
+      var c=CMA.find(function(x){return x.name.toLowerCase()===q;})||CMA.find(function(x){return x.name.toLowerCase().indexOf(q)===0;})||CMA.find(function(x){return x.name.toLowerCase().indexOf(q)>=0;});
+      if(c){ setTab('metro'); map.setView([c.lat,c.lng],10,{animate:true}); inp.blur(); } };  // zoom INTO the metro (reveals tracts/neighbourhoods) rather than staying at the national view
+    inp.addEventListener('change',go);
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();go();} });
+  }
+  var hb=document.getElementById('helpBtn'); if(hb) hb.onclick=function(){ var m=document.getElementById('welcome'); if(m) m.classList.remove('hidden'); };
+  var wg=document.getElementById('welcomeGo'); if(wg) wg.onclick=function(){ var m=document.getElementById('welcome'); if(m) m.classList.add('hidden'); };
+  var sb=document.getElementById('sourcesBtn'); if(sb) sb.onclick=function(){ var m=document.getElementById('sources'); if(m) m.classList.remove('hidden'); };
+  var sg=document.getElementById('sourcesGo'); if(sg) sg.onclick=function(){ var m=document.getElementById('sources'); if(m) m.classList.add('hidden'); };
+  var sm=document.getElementById('sources'); if(sm) sm.addEventListener('click',function(e){ if(e.target===sm) sm.classList.add('hidden'); });
+  if(typeof map!=='undefined'){ map.on('zoomend moveend',updateGuide); }
+  if(!applyShare()&&!applyStored()) setTab('metro');
+  updateGuide();
+  renderScens(); _renderPins();
+})();
+</script>
+</body>
+</html

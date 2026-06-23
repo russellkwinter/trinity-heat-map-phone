@@ -466,6 +466,17 @@
   }
   /* phone v4: hide floating home/help buttons (they overlap the card) */
   @media(max-width:1280px){ .homebtn,.helpbtn{display:none} }
+  /* phone v5: shrink/hide reference legends + wrap focus-city row */
+  @media(max-width:1280px){
+    #gtaKey{display:none!important}
+    .legend,.denslegend{width:114px}
+    .legend .lt,.denslegend .lt{font-size:8.5px}
+    .legsc,.denssc{font-size:7.5px}
+    .tkey{max-width:152px;padding:6px 8px}
+    .tkey .lt{font-size:9px}
+    .tkey .tkr,.tkey .tkn{font-size:9px}
+    .geoswitch{flex-wrap:wrap;row-gap:3px}
+  }
 </style>
 </head>
 <body>

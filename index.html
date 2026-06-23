@@ -184,7 +184,7 @@
     background:var(--ink2);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .foot a{color:var(--muted)}
   .railtoggle{display:none}
-  @media(max-width:760px){
+  @media(max-width:1280px){
     #app{height:100vh;width:100vw}
     .rail{position:absolute;z-index:700;left:0;top:0;bottom:0;width:290px;transform:translateX(-100%);transition:.25s;box-shadow:8px 0 30px rgba(0,0,0,.5)}
     .rail.open{transform:none}
@@ -251,7 +251,7 @@
   #app[data-tab="metro"][data-zoom="shallow"] #densLegend{display:none!important}
   #app[data-tab="metro"][data-zoom="deep"][data-city="1"] .legend{display:block}
   #app[data-tab="metro"][data-zoom="deep"][data-city="1"] #densLegend{display:none!important}
-  @media(max-width:760px){
+  @media(max-width:1280px){
     .tabs .tab{padding:7px 10px;font-size:11px}
     .cmasearch{width:104px;margin-left:6px}
     .addrsearch{width:120px}
@@ -290,7 +290,7 @@
 
   /* ===== session 3: relocated zoom + collapsible panels ===== */
   .leaflet-top.leaflet-right{right:248px}
-  @media(max-width:760px){.leaflet-top.leaflet-right{right:176px}}
+  @media(max-width:1280px){.leaflet-top.leaflet-right{right:176px}}
   .rail{transition:width .22s ease,padding .22s ease}
   .rail.collapsed{width:0;min-width:0;padding-left:0;padding-right:0;border-right:none;overflow:hidden}
   .railcollapsebtn{background:rgba(196,255,58,.14);color:var(--accent);border:1px solid rgba(196,255,58,.45);border-radius:6px;min-width:30px;height:25px;cursor:pointer;font-size:16px;font-weight:700;line-height:1;padding:0 8px;margin-left:5px}
@@ -360,7 +360,7 @@
   /* ============================================================
      PHONE BUILD — tuned for ~390px screens (overrides only)
      ============================================================ */
-  @media(max-width:768px){
+  @media(max-width:1280px){
     /* top bar wraps into compact rows */
     .top{flex-wrap:wrap;gap:6px;padding:6px 8px;align-items:center}
     .top .spacer{display:none}
@@ -408,6 +408,23 @@
     .foot{font-size:8px;padding:5px 8px;gap:6px}
   }
 
+  /* compact property / search popup */
+  .addrpopwrap .leaflet-popup-content{margin:8px 10px}
+  .addrpop{font-size:10px;min-width:170px}
+  .addrpop .aph{font-size:11px}
+  .addrpop .apsub{font-size:9px;margin-bottom:5px}
+  .addrpop .aptransit{font-size:9.5px;margin:1px 0 5px}
+  .aptbl td{padding:1px 5px;font-size:9.5px}
+  .aptblwrap{max-height:208px}
+  .leaflet-interactive.trinpin{filter:drop-shadow(0 0 3px rgba(22,214,192,.85))}
+  /* phone: declutter + ensure mobile layout even on wide/desktop-mode viewports */
+  @media(max-width:1280px){
+    .brand{display:none}
+    .top{padding:5px 8px}
+    .guide{padding:4px 8px 5px}
+    .guide .qv{flex-wrap:nowrap}
+    .board{display:none}
+  }
 </style>
 </head>
 <body>
@@ -436,6 +453,7 @@
     <button id="copyLink" class="copybtn" title="Copy a link to this exact view — tab, weighting mix &amp; focused city">&#128279; Link</button>
     <button id="addPin" class="copybtn" title="Drop a note pin on a site under review, then click the map">&#128205; Note</button>
     <button id="notesBtn" class="copybtn" title="Your saved site notes">Notes</button>
+      <button id="trinityToggle" class="copybtn" title="Toggle all Trinity-owned properties on the map">&#9670; Properties</button>
     <div id="hiddenToggles" style="display:none">
       <button id="densToggle" class="densbtn"></button>
       <button id="demoToggle" class="densbtn demobtn"></button>
@@ -1246,7 +1264,7 @@ function _placeAddr(lat,lng,disp){
   const ft=_findTract(lat,lng); const neigh=ft?_curatedNeigh(ft.u.slice(0,3),lat,lng):null; let html;
   if(ft){ html=_addrProfileHTML(ft,disp,neigh,lat,lng); map.setView([lat,lng],Math.max(map.getZoom(),13)); }
   else { html='<div class="addrpop"><div class="aph">'+disp+'</div><div class="apsub" style="opacity:.85">No census-tract data here — outside the 41 metro areas covered.</div></div>'; map.setView([lat,lng],Math.max(map.getZoom(),11)); }
-  _addrMarker.bindPopup(html,{maxWidth:300,minWidth:212,className:'addrpopwrap'}).openPopup(); }
+  _addrMarker.bindPopup(html,{maxWidth:240,minWidth:178,className:'addrpopwrap'}).openPopup(); }
 // ----- live address autocomplete (Nominatim) -----
 let _addrSugg=[], _addrSel=-1, _suggT=null, _lastQ='';
 function _shortName(dn){ return (dn||'').split(',').slice(0,4).join(','); }
@@ -1294,6 +1312,67 @@ async function doAddrLookup(q){ q=(q||'').trim(); if(!q) return;
       else if(e.key==='Escape'){ _hideSugg(); } }); }
   const ab=document.getElementById('addrGo'); if(ab) ab.onclick=()=>{ const x=document.getElementById('addrSearch'); doAddrLookup(x?x.value:''); };
   document.addEventListener('click',e=>{ if(!e.target.closest('.addrwrap')) _hideSugg(); }); }
+
+// ===== Trinity owned-properties layer (geocoded at runtime via the same Nominatim path) =====
+const TRINITY_PROPS=[
+ {n:"Okotoks (AB)",q:"Okotoks, Alberta, Canada",approx:1},
+ {n:"Olds (AB)",q:"Olds, Alberta, Canada",approx:1},
+ {n:"Ancaster — TRF",q:"Ancaster, Hamilton, Ontario, Canada",approx:1},
+ {n:"Bracebridge — 709 Ecclestone Dr",q:"709 Ecclestone Drive, Bracebridge, Ontario, Canada"},
+ {n:"Calgary — Trinity Hills / COP",q:"Canada Olympic Park, Calgary, Alberta, Canada"},
+ {n:"Cobourg — Northumberland Mall",q:"Northumberland Mall, Cobourg, Ontario, Canada"},
+ {n:"Montréal — Seville",q:"Seville, Montréal, Quebec, Canada",approx:1},
+ {n:"Montréal — Valleyfield",q:"Salaberry-de-Valleyfield, Quebec, Canada",approx:1},
+ {n:"Ottawa — Citigate",q:"Citigate, Ottawa, Ontario, Canada",approx:1},
+ {n:"Ottawa — 280 Crichton Ave",q:"280 Crichton Street, Ottawa, Ontario, Canada"},
+ {n:"Ottawa — Lansdowne",q:"Lansdowne Park, Ottawa, Ontario, Canada"},
+ {n:"Ottawa — LeBreton Flats",q:"LeBreton Flats, Ottawa, Ontario, Canada"},
+ {n:"Ottawa — Richmond & Island Park",q:"Island Park Drive, Ottawa, Ontario, Canada"},
+ {n:"Ottawa — 155 Chapel (Rideau Ph.2)",q:"155 Chapel Street, Ottawa, Ontario, Canada"},
+ {n:"Ottawa — Rideau & Chapel",q:"Chapel Street, Ottawa, Ontario, Canada"},
+ {n:"Ottawa — South Keys, 2300 Bank St",q:"2300 Bank Street, Ottawa, Ontario, Canada"},
+ {n:"Ottawa — Woodroffe & Nepean",q:"Woodroffe Avenue, Nepean, Ottawa, Ontario, Canada",approx:1},
+ {n:"Toronto — Sheridan Plaza",q:"1700 Wilson Avenue, Toronto, Ontario, Canada"},
+ {n:"Toronto — 1540 Bloor St W",q:"1540 Bloor Street West, Toronto, Ontario, Canada"},
+ {n:"Toronto — Guildwood, 4121 Kingston Rd",q:"4121 Kingston Road, Toronto, Ontario, Canada"},
+ {n:"Toronto — 663 Queen St W",q:"663 Queen Street West, Toronto, Ontario, Canada"},
+ {n:"Toronto — Richview Sq, 250 Wincott Dr",q:"250 Wincott Drive, Toronto, Ontario, Canada"},
+ {n:"Ottawa — Trinity Office, 979 Bank St",q:"979 Bank Street, Ottawa, Ontario, Canada"}
+];
+var trinityOn=false, trinityLayer=L.layerGroup(), _trinDone=false, _trinCache={};
+try{_trinCache=JSON.parse(localStorage.getItem('trinityGeo_v1')||'{}');}catch(e){_trinCache={};}
+function _trinSave(){try{localStorage.setItem('trinityGeo_v1',JSON.stringify(_trinCache));}catch(e){}}
+function _addTrinMarker(p,lat,lng){
+  var m=L.circleMarker([lat,lng],{radius:7,color:'#ffffff',weight:2,fillColor:'#16d6c0',fillOpacity:.95,className:'trinpin'});
+  m.bindTooltip(p.n,{direction:'top',className:'ntip',opacity:1});
+  var ft=_findTract(lat,lng); var neigh=ft?_curatedNeigh(ft.u.slice(0,3),lat,lng):null;
+  var html=ft?_addrProfileHTML(ft,'🏢 '+p.n,neigh,lat,lng)
+              :'<div class="addrpop"><div class="aph">🏢 '+p.n+'</div><div class="apsub" style="opacity:.85">Outside the 41 metro areas — no census-tract data here.</div></div>';
+  m.bindPopup(html,{maxWidth:240,minWidth:178,className:'addrpopwrap'});
+  m.addTo(trinityLayer);
+}
+async function _trinGeocodeAll(){
+  for(var i=0;i<TRINITY_PROPS.length;i++){ var p=TRINITY_PROPS[i];
+    if(_trinCache[p.q]!==undefined){ continue; }
+    _setAddrStatus('Locating Trinity properties… '+(i+1)+'/'+TRINITY_PROPS.length);
+    try{ var r=await fetch(_geoURL(p.q,1),{headers:{'Accept':'application/json'}}); var j=await r.json();
+      _trinCache[p.q]=(j&&j.length)?[+j[0].lat,+j[0].lon]:null;
+    }catch(e){ _trinCache[p.q]=null; }
+    await new Promise(function(res){setTimeout(res,1100);});
+  }
+  _trinSave(); _setAddrStatus('');
+}
+async function setTrinity(on){ trinityOn=on; var b=document.getElementById('trinityToggle'); if(b)b.classList.toggle('on',on);
+  if(on){
+    if(!_trinDone){ await _trinGeocodeAll(); trinityLayer.clearLayers();
+      var placed=0; TRINITY_PROPS.forEach(function(p){ var c=_trinCache[p.q]; if(c){ _addTrinMarker(p,c[0],c[1]); placed++; } });
+      _trinDone=true; if(placed<TRINITY_PROPS.length) _setAddrStatus(placed+'/'+TRINITY_PROPS.length+' properties located'); setTimeout(_setAddrStatus,4000,'');
+    }
+    trinityLayer.addTo(map); trinityLayer.bringToFront();
+  } else { if(map.hasLayer(trinityLayer)) map.removeLayer(trinityLayer); }
+}
+{ var _tt=document.getElementById('trinityToggle'); if(_tt) _tt.onclick=function(){ setTrinity(!trinityOn); }; }
+
 function buildDemoLegend(){let el=document.getElementById('demoLegend');if(!el){el=document.createElement('div');el.id='demoLegend';el.className='denslegend demolegend';el.style.display='none';el.addEventListener('click',function(ev){if(ev.target.closest('.lt'))el.classList.toggle('collapsed');});const mw=document.querySelector('.mapwrap');if(mw)mw.appendChild(el);}const v=demoVarDef();const br=v.breaks;const labs=['< '+fmtShort(br[0],v.fmt)];for(let i=0;i<br.length-1;i++)labs.push(fmtShort(br[i],v.fmt)+'\u2013'+fmtShort(br[i+1],v.fmt));labs.push('\u2265 '+fmtShort(br[br.length-1],v.fmt));el.innerHTML='<div class="lt">'+v.label+' \u00b7 GTA municipalities<span class="legchev">\u25be</span></div><div class="densramp">'+DEMO_COLORS.map(c=>'<span style="background:'+c+'"></span>').join('')+'</div><div class="denssc">'+labs.map(l=>'<span>'+l+'</span>').join('')+'</div><div class="denshint" id="demoHint">Zoom into the GTA to see municipalities.</div><div class="densnote">2021 census \u00b7 55 municipalities</div>';}
 function demoHintCheck(){const x=document.getElementById('demoHint');if(x)x.style.display=(demoOn&&map.getZoom()<8)?'':'none';}
 function demoRestyle(){for(const k in _muniCache){if(municipalLayer.hasLayer(_muniCache[k]))_muniCache[k].setStyle(muniStyle);}}

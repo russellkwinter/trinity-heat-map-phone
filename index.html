@@ -438,6 +438,32 @@
     .addrpop{min-width:150px}
     .aptblwrap{max-height:none}
   }
+  /* phone fixes v3: reclaim top-bar space + detail card as compact bottom sheet */
+  @media(max-width:1280px){
+    .guide .now{display:none}
+    .guide{padding:4px 8px}
+    .top{padding:4px 8px;gap:5px}
+    .copybtn{height:28px;font-size:10px;padding:0 7px}
+    .tabs .tab{font-size:11px;padding:5px 10px}
+    .addrsearch{height:30px}
+    .addrgo{padding:5px 9px}
+    .cgsel,.demosel,.presetrow select{height:26px;font-size:11px}
+    .cglab{font-size:8px}
+    .modeswitch button{font-size:10px;padding:4px 8px}
+    .ctrlbar{gap:5px}
+    /* detail card = bottom sheet (never covers the controls, fits screen) */
+    .card{top:auto!important;bottom:0!important;left:0!important;right:0!important;width:100%!important;max-width:100%!important;transform:none!important;max-height:60vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:10px 12px 16px}
+    .cardh .nm{font-size:13px}
+    .cardsub{font-size:10px;margin-bottom:8px}
+    .scorebig{padding:6px 9px;margin-bottom:8px;gap:8px}
+    .scorebig .ring{width:30px;height:30px;font-size:11px}
+    .scorebig .sl{font-size:8.5px}
+    .scorebig .sd{font-size:10px}
+    .ml{font-size:10px;padding:3px 2px}
+    .ml .mlv{font-size:10px}
+    .ml .mlb{width:40px}
+    .cardcov{font-size:8px}
+  }
 </style>
 </head>
 <body>

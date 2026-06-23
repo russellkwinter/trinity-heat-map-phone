@@ -425,6 +425,19 @@
     .guide .qv{flex-wrap:nowrap}
     .board{display:none}
   }
+  /* phone fixes v2: zoom hidden (pinch-zoom), popups/card fit screen, smaller legends, hide board */
+  @media(max-width:1280px){
+    .leaflet-control-zoom{display:none!important}
+    #app .board{display:none!important}
+    .legend,.denslegend{width:130px}
+    .legend .lt,.denslegend .lt{font-size:9px}
+    .legsc,.denssc{font-size:8px}
+    .legnote,.denshint,.densnote{display:none}
+    .card{width:92vw!important;max-width:92vw;left:4vw!important;right:auto!important;transform:none!important;top:60px!important;max-height:74vh;overflow-y:auto}
+    .addrpopwrap .leaflet-popup-content{max-height:56vh;overflow-y:auto;margin:8px 10px}
+    .addrpop{min-width:150px}
+    .aptblwrap{max-height:none}
+  }
 </style>
 </head>
 <body>
